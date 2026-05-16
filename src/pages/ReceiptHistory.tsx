@@ -1,22 +1,65 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
 import { Search, Receipt, RefreshCcw, Download, ChevronRight } from 'lucide-react';
-import { usePOSStore } from '../store/posStore';
+import { usePOSStore, SaleRecord } from '../store/posStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '../components/ui/dialog';
+import { useReactToPrint } from 'react-to-print';
+import { ReceiptPrint } from '../components/pos/ReceiptPrint';
 
 export default function ReceiptHistory() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
   const { offlineQueue } = usePOSStore(); // Mocking recent sales via offlineQueue for demo
+  const receiptRef = useRef<HTMLDivElement>(null);
+
+  const setSaleAndPrint = (sale: SaleRecord) => {
+    setSelectedSale(sale);
+    setTimeout(() => {
+      handlePrint();
+    }, 100);
+  };
+
+  const handlePrint = useReactToPrint({
+    contentRef: receiptRef
+  });
+
+  const exportCSV = () => {
+    if (offlineQueue.length === 0) {
+      alert('No receipts to export');
+      return;
+    }
+    
+    const headers = ['Receipt #', 'Date', 'Total Amount', 'Items', 'Status'];
+    const rows = offlineQueue.map(s => [
+      s.receiptNumber,
+      new Date(s.timestamp).toLocaleString(),
+      s.total.toFixed(2),
+      s.items.map(i => `${i.product.name} (x${i.quantity})`).join('; '),
+      s.status
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(',') + "\n" 
+      + rows.map(e => `"${e.join('","')}"`).join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `receipts_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold tracking-tight">Receipt History</h1>
-        <Button variant="outline">
+        <Button variant="outline" onClick={exportCSV}>
           <Download className="mr-2 h-4 w-4" /> Export CSV
         </Button>
       </div>
@@ -91,7 +134,7 @@ export default function ReceiptHistory() {
                               <span>${sale.total.toFixed(2)}</span>
                             </div>
                             <div className="mt-8 pt-4 flex gap-4">
-                              <Button className="w-full">
+                              <Button className="w-full" onClick={() => setSaleAndPrint(sale)}>
                                 <Receipt className="mr-2 h-4 w-4" /> Reprint
                               </Button>
                               <Button variant="outline" className="w-full text-red-600 hover:text-red-700 hover:bg-red-50">
@@ -109,6 +152,9 @@ export default function ReceiptHistory() {
           </Table>
         </CardContent>
       </Card>
+      
+      {/* Hidden print component */}
+      <ReceiptPrint ref={receiptRef} sale={selectedSale} />
     </div>
   );
 }

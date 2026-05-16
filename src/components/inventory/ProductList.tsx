@@ -129,6 +129,40 @@ export function ProductList() {
     }
   };
 
+  const exportCSV = () => {
+    if (products.length === 0) {
+      toast.error('No products to export');
+      return;
+    }
+    
+    // Generate CSV content
+    const headers = ['SKU', 'Barcode', 'Name', 'Category', 'Retail Price', 'Wholesale Price', 'Tax Class', 'Active'];
+    const rows = products.map(p => [
+      p.sku || '',
+      p.barcode || '',
+      `"${p.name || ''}"`,
+      p.categories?.name || '',
+      p.retail_price || 0,
+      p.wholesale_price || 0,
+      p.tax_class || '',
+      p.is_active ? 'Yes' : 'No'
+    ]);
+    
+    const csvContent = "data:text/csv;charset=utf-8," 
+      + headers.join(',') + "\n" 
+      + rows.map(e => e.join(",")).join("\n");
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success('Products exported successfully');
+  };
+
   const getStatusBadge = (stock: number) => {
     if (stock > 50) return <Badge className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100 border-0">In Stock</Badge>;
     if (stock > 10) return <Badge className="bg-amber-100 text-amber-800 hover:bg-amber-100 border-0">Low Stock</Badge>;
@@ -149,6 +183,8 @@ export function ProductList() {
           />
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <Button variant="outline" className="bg-white shadow-sm" onClick={() => toast.info('Please use the "Bulk Import" tab to import products.')}>Import</Button>
+          <Button variant="outline" className="bg-white shadow-sm" onClick={exportCSV}><Download className="mr-2 h-4 w-4" /> Export</Button>
           <Button variant="outline" className="bg-white shadow-sm"><Filter className="mr-2 h-4 w-4" /> Filter</Button>
           <Button variant="outline" className="bg-white shadow-sm"><Settings2 className="mr-2 h-4 w-4" /> View</Button>
           

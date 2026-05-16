@@ -15,6 +15,7 @@ import { NotificationSettings } from '../components/settings/NotificationSetting
 import { SecuritySettings } from '../components/settings/SecuritySettings';
 import { IntegrationSettings } from '../components/settings/IntegrationSettings';
 import { AiSettings } from '../components/settings/AiSettings';
+import { SupportSettings } from '../components/settings/SupportSettings';
 import { Separator } from '../components/ui/separator';
 
 export default function Settings() {
@@ -37,6 +38,7 @@ export default function Settings() {
       case 'security': return <SecuritySettings />;
       case 'integrations': return <IntegrationSettings />;
       case 'ai': return <AiSettings />;
+      case 'support': return <SupportSettings />;
       default: return <BusinessProfile />;
     }
   };

@@ -235,10 +235,22 @@ export default function Landing() {
                 <li className="flex items-center gap-3 text-sm"><CheckCircle2 className="w-5 h-5 text-primary shrink-0" /> Custom API Access</li>
                 <li className="flex items-center gap-3 text-sm"><CheckCircle2 className="w-5 h-5 text-primary shrink-0" /> 24/7 Priority Support</li>
               </ul>
-              <Link to="/login" className="mt-auto">
+              <a href="mailto:tapiwagahadza54@gmail.com?subject=Enterprise Inquiry - Tareza ERP" className="mt-auto block">
                 <Button variant="outline" className="w-full">Contact Sales</Button>
-              </Link>
+              </a>
             </div>
+          </div>
+          
+          <div className="mt-16 bg-primary/5 rounded-2xl border border-primary/20 p-8 max-w-3xl mx-auto flex flex-col md:flex-row items-center justify-between text-center md:text-left gap-6">
+            <div>
+               <h4 className="font-bold text-lg text-zinc-900 dark:text-zinc-50 mb-1">Payment & Subscription Enquiries</h4>
+               <p className="text-sm text-zinc-600 dark:text-zinc-400">For manual payments, plan upgrades, or direct support, please email our billing team.</p>
+            </div>
+            <a href="mailto:tapiwagahadza54@gmail.com?subject=Payment Request - Tareza ERP">
+               <Button className="shrink-0 bg-primary text-primary-foreground font-semibold">
+                  Contact tapiwagahadza54@gmail.com
+               </Button>
+            </a>
           </div>
         </div>
       </section>
@@ -249,6 +261,9 @@ export default function Landing() {
            <div className="flex items-center space-x-2 mb-4 md:mb-0">
              <Store className="w-5 h-5 text-primary" />
              <span className="font-bold tracking-widest text-white">TAREZA ERP</span>
+           </div>
+           <div className="flex flex-col md:flex-row items-center gap-4 text-zinc-400 mb-4 md:mb-0">
+             <a href="mailto:tapiwagahadza54@gmail.com" className="hover:text-primary transition-colors">Support & Payments: tapiwagahadza54@gmail.com</a>
            </div>
            <p className="text-zinc-400">© 2026 Tareza Technologies. All rights reserved.</p>
         </div>

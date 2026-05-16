@@ -39,6 +39,7 @@ const navItems = [
   { id: 'security', label: 'Security & Backups', icon: Lock },
   { id: 'integrations', label: 'Integrations', icon: Puzzle },
   { id: 'ai', label: 'AI & Automation', icon: Bot },
+  { id: 'support', label: 'Help & Support', icon: Bell },
 ];
 
 export function SettingsSidebar({ activeTab, setActiveTab }: SettingsSidebarProps) {

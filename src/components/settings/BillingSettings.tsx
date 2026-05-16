@@ -6,7 +6,7 @@ import { Check, AlertTriangle, CreditCard, ChevronRight, Download, HelpCircle } 
 import { Table, TableHead, TableHeader, TableRow, TableCell, TableBody } from '../ui/table';
 
 export function BillingSettings() {
-  const planStatus = 'GRACE_PERIOD';
+  const planStatus: string = 'GRACE_PERIOD';
   const expiresAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); 
   const gracePeriodEnd = new Date(expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000);
   const daysLeftInGrace = Math.floor((gracePeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
@@ -18,7 +18,7 @@ export function BillingSettings() {
           <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Billing & Subscription</h3>
           <p className="text-sm text-zinc-500 mt-1">Manage your subscription plan, branches, and user limits.</p>
         </div>
-        <Button variant="outline" className="text-zinc-600">
+        <Button variant="outline" className="text-zinc-600" onClick={() => window.location.href = 'mailto:tapiwagahadza54@gmail.com?subject=Billing Support - Tareza ERP'}>
           <HelpCircle className="w-4 h-4 mr-2" /> Billing Support
         </Button>
       </div>
