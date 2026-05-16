@@ -120,11 +120,11 @@ ALTER TABLE pos_settings ENABLE ROW LEVEL SECURITY;
 ALTER TABLE security_settings ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "Users can view exchange rate history" ON exchange_rate_history FOR SELECT USING (
-    currency_id IN (SELECT id FROM currencies WHERE business_id IN (SELECT business_id FROM profiles WHERE id = auth.uid()))
+    currency_id IN (SELECT id FROM currencies WHERE business_id IN (SELECT auth_user_businesses()))
 );
 
 CREATE POLICY "Users can view notification settings" ON notification_settings FOR SELECT USING (
-    business_id IN (SELECT business_id FROM profiles WHERE id = auth.uid())
+    business_id IN (SELECT auth_user_businesses())
 );
 
 CREATE POLICY "Users can view their notifications" ON notifications FOR SELECT USING (
@@ -136,9 +136,9 @@ CREATE POLICY "Users can update their notifications" ON notifications FOR UPDATE
 );
 
 CREATE POLICY "Users can view pos settings" ON pos_settings FOR SELECT USING (
-    business_id IN (SELECT business_id FROM profiles WHERE id = auth.uid())
+    business_id IN (SELECT auth_user_businesses())
 );
 
 CREATE POLICY "Users can view security settings" ON security_settings FOR SELECT USING (
-    business_id IN (SELECT business_id FROM profiles WHERE id = auth.uid())
+    business_id IN (SELECT auth_user_businesses())
 );
