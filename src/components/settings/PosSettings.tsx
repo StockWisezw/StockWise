@@ -1,75 +1,150 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
+import { ShoppingCart, Printer, ShieldCheck, Save, MonitorPlay } from 'lucide-react';
+import { toast } from 'sonner';
 
 export function PosSettings() {
+  const [isSaving, setIsSaving] = useState(false);
+
+  const handleSave = () => {
+    setIsSaving(true);
+    setTimeout(() => {
+      setIsSaving(false);
+      toast.success('POS settings updated successfully');
+    }, 800);
+  };
+
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">POS Operational Settings</h3>
-        <p className="text-sm text-zinc-500">
-          Control point of sale behaviors, receipt printing, and cashier restrictions.
-        </p>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Point of Sale (POS) Settings</h3>
+          <p className="text-sm text-zinc-500 mt-1">
+            Control terminal behaviors, receipt printing, and cashier restrictions.
+          </p>
+        </div>
+        <Button onClick={handleSave} disabled={isSaving} className="bg-primary text-primary-foreground shadow-sm px-6">
+          {isSaving ? 'Saving...' : <><Save className="w-4 h-4 mr-2" /> Save Config</>}
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Till Management</CardTitle>
-          <CardDescription>Configure how shifts and cash drawers operate.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between space-x-2">
-            <div className="flex flex-col space-y-1">
-              <Label>Require Till Opening Float</Label>
-              <span className="text-sm text-zinc-500">
-                Cashiers must declare their opening drawer balance before starting a shift.
-              </span>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="border-zinc-200/60 shadow-sm md:col-span-2">
+          <CardHeader className="pb-4 border-b border-zinc-100">
+            <div className="flex items-center gap-2">
+              <MonitorPlay className="w-5 h-5 text-zinc-400" />
+              <CardTitle className="text-lg">Checkout Experience</CardTitle>
             </div>
-            <Switch defaultChecked />
-          </div>
-          <div className="flex items-center justify-between space-x-2">
-            <div className="flex flex-col space-y-1">
-              <Label>Blind Closeout</Label>
-              <span className="text-sm text-zinc-500">
-                Hide system totals when closing till, forcing a manual cash count.
-              </span>
+            <CardDescription>Rules for scanning, pricing, options and completing sales at the terminal.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-zinc-100 bg-zinc-50/50">
+                <div className="flex flex-col space-y-1">
+                  <Label className="font-semibold text-zinc-900">Enable Retail / Wholesale Toggle</Label>
+                  <span className="text-sm text-zinc-500">
+                    Allow cashiers to switch pricing tiers for bulk shoppers.
+                  </span>
+                </div>
+                <Switch defaultChecked />
+              </div>
+
+              <div className="flex items-start justify-between gap-4 p-4 rounded-xl border border-zinc-100 bg-zinc-50/50">
+                <div className="flex flex-col space-y-1">
+                  <Label className="font-semibold text-zinc-900">Auto-Return to Search</Label>
+                  <span className="text-sm text-zinc-500">
+                    Focus the search bar automatically after scanning an item.
+                  </span>
+                </div>
+                <Switch defaultChecked />
+              </div>
             </div>
-            <Switch />
-          </div>
-        </CardContent>
-      </Card>
-      
-      <Card>
-        <CardHeader>
-          <CardTitle>Checkout Behavior</CardTitle>
-          <CardDescription>Rules for scanning, pricing, and completing sales.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex items-center justify-between space-x-2">
-            <div className="flex flex-col space-y-1">
-              <Label>Enable Price Overrides at POS</Label>
-              <span className="text-sm text-zinc-500">
-                Allow authorized cashiers to manually change item prices during checkout.
-              </span>
+          </CardContent>
+        </Card>
+
+        <Card className="border-zinc-200/60 shadow-sm">
+          <CardHeader className="pb-4 border-b border-zinc-100">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="w-5 h-5 text-zinc-400" />
+              <CardTitle className="text-lg">Till & Cash Management</CardTitle>
             </div>
-            <Switch />
-          </div>
-          <div className="flex items-center justify-between space-x-2">
-            <div className="flex flex-col space-y-1">
-              <Label>Auto-Print Receipts</Label>
-              <span className="text-sm text-zinc-500">
-                Automatically fire the receipt printer when a transaction is completed.
-              </span>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-50">
+              <div className="flex flex-col space-y-1 pr-4">
+                <Label className="font-semibold text-zinc-900">Require Floating Balance</Label>
+                <span className="text-xs text-zinc-500 max-w-[200px]">
+                  Cashiers must declare their opening floating cash before starting a shift.
+                </span>
+              </div>
+              <Switch defaultChecked />
             </div>
-            <Switch defaultChecked />
-          </div>
-        </CardContent>
-        <CardFooter className="border-t px-6 py-4">
-          <Button>Save Settings</Button>
-        </CardFooter>
-      </Card>
+            
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-50">
+              <div className="flex flex-col space-y-1 pr-4">
+                <Label className="font-semibold text-zinc-900">Blind Closeout</Label>
+                <span className="text-xs text-zinc-500 max-w-[200px]">
+                  Hide system expected cash totals when closing till to force accurate counting.
+                </span>
+              </div>
+              <Switch />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col space-y-1 pr-4">
+                <Label className="font-semibold text-zinc-900">Require Manager PIN for Refunds</Label>
+                <span className="text-xs text-zinc-500 max-w-[200px]">
+                  Requires supervisor authorization to issue cash or card refunds.
+                </span>
+              </div>
+              <Switch defaultChecked />
+            </div>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-zinc-200/60 shadow-sm">
+          <CardHeader className="pb-4 border-b border-zinc-100">
+            <div className="flex items-center gap-2">
+              <Printer className="w-5 h-5 text-zinc-400" />
+              <CardTitle className="text-lg">Receipt Operations</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="pt-6 space-y-4">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-50">
+              <div className="flex flex-col space-y-1 pr-4">
+                <Label className="font-semibold text-zinc-900">Auto-Print Receipts</Label>
+                <span className="text-xs text-zinc-500 max-w-[200px]">
+                  Automatically fire the thermal receipt printer when a transaction is completed.
+                </span>
+              </div>
+              <Switch defaultChecked />
+            </div>
+
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-50">
+              <div className="flex flex-col space-y-1 pr-4">
+                <Label className="font-semibold text-zinc-900">Print Store Logo</Label>
+                <span className="text-xs text-zinc-500 max-w-[200px]">
+                  Include the business logo at the top of the thermal receipt.
+                </span>
+              </div>
+              <Switch defaultChecked />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col space-y-1 pr-4">
+                <Label className="font-semibold text-zinc-900">Print Return Barcode</Label>
+                <span className="text-xs text-zinc-500 max-w-[200px]">
+                  Print a scannable barcode at the bottom of the receipt for fast refunds.
+                </span>
+              </div>
+              <Switch defaultChecked />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

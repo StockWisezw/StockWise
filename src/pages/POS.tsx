@@ -467,14 +467,15 @@ export default function POS() {
             </div>
 
             <div className="p-4 bg-zinc-50 border-t border-zinc-200 space-y-3">
-              <div className="flex gap-2">
-                <Button variant="outline" className="flex-1 bg-white h-12" onClick={clearCart} disabled={cart.length === 0}>
+              <div className="grid grid-cols-3 gap-2">
+                <Button variant="outline" className="bg-white h-12 border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 font-semibold" onClick={clearCart} disabled={cart.length === 0}>
                   Cancel
                 </Button>
                 <Dialog>
                   <DialogTrigger asChild>
-                    <Button variant="outline" className="flex-1 bg-white h-12" disabled={cart.length === 0}>
-                      <Tag className="w-4 h-4 mr-2" /> Discount
+                    <Button variant="outline" className="bg-white h-12 font-semibold" disabled={cart.length === 0}>
+                      <Tag className="w-4 h-4 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Discount</span>
                     </Button>
                   </DialogTrigger>
                   <DialogContent>
@@ -489,16 +490,28 @@ export default function POS() {
                     </div>
                   </DialogContent>
                 </Dialog>
+                <Button variant="outline" className="bg-white h-12 border-zinc-200 font-semibold" onClick={() => toast.info('Select order from history to refund.')}>
+                  Refund
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" className="bg-white h-10 border-zinc-200 text-zinc-700 font-medium text-xs sm:text-sm" onClick={() => toast.info(lastSale ? 'Printing previous tax invoice...' : 'No transaction available to print.')}>
+                   <Receipt className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1.5" /> <span className="truncate">Print Tax Invoice</span>
+                </Button>
+                <Button variant="outline" className="bg-white h-10 border-zinc-200 text-zinc-700 font-medium text-xs sm:text-sm" onClick={() => toast.info('Drawer opened.')}>
+                   Open Drawer
+                </Button>
               </div>
               
               <Button 
-                className="w-full h-16 text-xl font-bold shadow-lg transition-transform active:scale-[0.98] bg-primary text-secondary hover:bg-primary/90 relative overflow-hidden"
+                className="w-full h-16 text-xl font-bold shadow-lg transition-transform active:scale-[0.98] bg-emerald-600 text-white hover:bg-emerald-700 relative overflow-hidden rounded-xl border border-emerald-700 mt-2"
                 disabled={cart.length === 0} 
                 onClick={() => setShowPayment(true)}
               >
                 <div className="absolute inset-0 bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
-                <span className="flex items-center">CHARGE <ArrowRightLeft className="ml-2 w-5 h-5 opacity-80" /></span>
-                <span className="absolute right-6 font-mono font-extrabold">${totals.total.toFixed(2)}</span>
+                <span className="flex items-center ml-4">Pay Now</span>
+                <span className="absolute right-6 font-mono font-extrabold text-2xl">${totals.total.toFixed(2)}</span>
               </Button>
             </div>
           </CardContent>

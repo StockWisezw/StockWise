@@ -1,11 +1,12 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
-import { Plus } from 'lucide-react';
+import { Plus, Calculator, Edit2, Percent } from 'lucide-react';
+import { toast } from 'sonner';
 
 const mockTaxRates = [
   { id: '1', name: 'VAT Standard', rate: 15.0, type: 'Percentage', isDefault: true, isActive: true },
@@ -14,81 +15,112 @@ const mockTaxRates = [
 ];
 
 export function TaxationSettings() {
+  const [isAdding, setIsAdding] = useState(false);
+
+  const handleAdd = () => {
+    setIsAdding(true);
+    setTimeout(() => {
+      setIsAdding(false);
+      toast.info('Tax rate form will open here.');
+    }, 400);
+  };
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h3 className="text-lg font-medium">Taxation & VAT Configuration</h3>
-          <p className="text-sm text-zinc-500">
+          <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Taxation & VAT Configuration</h3>
+          <p className="text-sm text-zinc-500 mt-1">
             Manage your tax rules, calculation methods, and VAT rates.
           </p>
         </div>
-        <Button size="sm"><Plus className="mr-2 h-4 w-4" /> Add Tax Rate</Button>
+        <Button onClick={handleAdd} disabled={isAdding} className="bg-primary text-primary-foreground shadow-sm">
+          <Plus className="mr-2 h-4 w-4" /> Add Tax Rate
+        </Button>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tax Engine Settings</CardTitle>
-          <CardDescription>Global tax calculation preferences</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex items-center justify-between space-x-2">
-            <div className="flex flex-col space-y-1">
-              <Label>Tax Inclusive Pricing</Label>
-              <span className="text-sm text-zinc-500 flex items-center">
-                Prices entered in the system already include tax.
-              </span>
-            </div>
-            <Switch defaultChecked />
-          </div>
-          <div className="flex items-center justify-between space-x-2">
-            <div className="flex flex-col space-y-1">
-              <Label>Enable Multiple Tax Types on Items</Label>
-              <span className="text-sm text-zinc-500">
-                Allow applying more than one tax rate to a single product.
-              </span>
-            </div>
-            <Switch />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-1">
+          <Card className="border-zinc-200/60 shadow-sm h-full">
+            <CardHeader className="pb-4 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <Calculator className="w-5 h-5 text-zinc-400" />
+                <CardTitle className="text-lg">Tax Engine Settings</CardTitle>
+              </div>
+              <CardDescription className="mt-1">Global tax calculation preferences</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-6">
+              <div className="flex flex-col space-y-3">
+                <div className="flex items-center justify-between pb-4 border-b border-zinc-100">
+                  <div className="flex flex-col space-y-1">
+                    <Label className="font-semibold text-zinc-900">Tax Inclusive Pricing</Label>
+                    <span className="text-xs text-zinc-500">
+                      Prices entered in the system already include tax.
+                    </span>
+                  </div>
+                  <Switch defaultChecked />
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col space-y-1">
+                    <Label className="font-semibold text-zinc-900">Enable Multiple Tax Types on Items</Label>
+                    <span className="text-xs text-zinc-500">
+                      Allow applying more than one tax rate to a single product.
+                    </span>
+                  </div>
+                  <Switch />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Tax Rates</CardTitle>
-          <CardDescription>Defined tax rates for ZIMRA compliance.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Rate (%)</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockTaxRates.map(tax => (
-                <TableRow key={tax.id}>
-                  <TableCell className="font-medium">
-                    {tax.name} {tax.isDefault && <Badge variant="secondary" className="ml-2">Default</Badge>}
-                  </TableCell>
-                  <TableCell>{tax.rate.toFixed(2)}%</TableCell>
-                  <TableCell>
-                    <Badge variant={tax.isActive ? "default" : "secondary"}>
-                      {tax.isActive ? "Active" : "Inactive"}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm">Edit</Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+        <div className="md:col-span-2">
+          <Card className="border-zinc-200/60 shadow-sm overflow-hidden h-full">
+            <CardHeader className="pb-4 border-b border-zinc-100 bg-zinc-50/50">
+              <div className="flex items-center gap-2">
+                <Percent className="w-5 h-5 text-zinc-400" />
+                <CardTitle className="text-lg">Configured Tax Rates</CardTitle>
+              </div>
+              <CardDescription className="mt-1">Defined tax rates mapped to ZIMRA FDMS requirements.</CardDescription>
+            </CardHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-zinc-50/50">
+                  <TableRow>
+                    <TableHead className="w-[200px]">Name</TableHead>
+                    <TableHead>Rate (%)</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {mockTaxRates.map(tax => (
+                    <TableRow key={tax.id} className="group hover:bg-zinc-50/50 transition-colors">
+                      <TableCell className="font-semibold text-zinc-900">
+                        <div className="flex items-center gap-2">
+                          {tax.name}
+                          {tax.isDefault && <Badge className="bg-blue-50 text-blue-700 border-blue-200 hover:bg-blue-100 text-[10px] tracking-wider uppercase">Default</Badge>}
+                        </div>
+                      </TableCell>
+                      <TableCell className="font-mono text-zinc-700 font-medium">{tax.rate.toFixed(2)}%</TableCell>
+                      <TableCell>
+                        <Badge className={`${tax.isActive ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100' : 'bg-zinc-100 text-zinc-600 border-zinc-200'}`}>
+                          {tax.isActive ? "Active" : "Inactive"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button variant="outline" size="sm" className="h-8 border-zinc-200 text-zinc-700 hover:bg-zinc-100">
+                           <Edit2 className="w-3 h-3 mr-1.5" /> Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </div>
+      </div>
     </div>
   );
 }

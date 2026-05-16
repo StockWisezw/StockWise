@@ -36,67 +36,88 @@ export default function Landing() {
       </nav>
 
       {/* Hero Section */}
-      <section className="w-full max-w-7xl mx-auto px-6 py-24 md:py-32 flex flex-col lg:flex-row items-center relative">
-        {/* Background Gradients */}
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-primary/10 rounded-full blur-[120px] -z-10 pointer-events-none"></div>
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-secondary/5 rounded-full blur-[100px] -z-10 pointer-events-none"></div>
-
-        <div className="lg:w-1/2 space-y-8 z-10 text-center lg:text-left">
-          <div className="inline-flex items-center space-x-2 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-full px-4 py-1.5 text-sm font-medium">
-            <SparklesIcon className="w-4 h-4 text-primary" />
-            <span>Now with Tareza AI Insights</span>
-          </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1] text-zinc-900 dark:text-zinc-50">
-            The Intelligent <br className="hidden md:block" />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-600">
-              Business OS
-            </span>
-          </h1>
-          
-          <p className="text-xl text-zinc-500 dark:text-zinc-400 max-w-2xl mx-auto lg:mx-0 leading-relaxed">
-            Powering African commerce. Point of Sale, multi-branch inventory, 
-            accounting, and AI forecasting—all in one enterprise-grade platform.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-4 pt-4">
-            <Link to="/login">
-              <Button size="lg" className="h-14 px-8 text-base font-bold w-full sm:w-auto shadow-lg shadow-primary/25">
-                Start your 14-day free trial
-              </Button>
-            </Link>
-            <Button size="lg" variant="outline" className="h-14 px-8 text-base font-bold w-full sm:w-auto bg-transparent border-zinc-300 dark:border-zinc-700">
-              Book a Demo
-            </Button>
-          </div>
-          <p className="text-sm text-zinc-500 font-medium">No credit card required. Cancel anytime.</p>
+      <section className="relative w-full overflow-hidden bg-background">
+        {/* Full-width Video Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none">
+          <video 
+            autoPlay 
+            loop 
+            muted 
+            playsInline 
+            className="w-full h-full object-cover opacity-40 dark:opacity-30"
+          >
+            <source src="https://assets.mixkit.co/videos/preview/mixkit-business-dashboard-in-a-computer-screen-41764-large.mp4" type="video/mp4" />
+          </video>
+          {/* Overlays to ensure text contrast and add depth */}
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/40 dark:from-background dark:via-background/95 dark:to-background/60"></div>
+          <div className="absolute inset-0 backdrop-blur-[4px] dark:backdrop-blur-[8px]"></div>
         </div>
-        
-        <div className="lg:w-1/2 mt-16 lg:mt-0 relative z-10">
-          <div className="relative rounded-2xl overflow-hidden border border-border/50 shadow-2xl glass-effect p-2 bg-gradient-to-br from-white/40 to-white/10 dark:from-zinc-900/80 dark:to-zinc-950/80 backdrop-blur-xl">
-            <img 
-              src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?q=80&w=2000&auto=format&fit=crop" 
-              alt="Tareza ERP Interface" 
-              className="rounded-xl w-full object-cover shadow-inner opacity-90"
-            />
-            {/* Floating KPI Cards */}
-            <div className="absolute -left-6 bottom-12 bg-white dark:bg-zinc-900 p-4 rounded-xl shadow-xl border border-border/50 flex items-center space-x-3 hidden md:flex animate-in slide-in-from-bottom-5 duration-1000 delay-300">
-              <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg text-emerald-600">
-                <TrendingUp className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="text-xs font-bold text-zinc-500 uppercase">Daily Revenue</p>
-                <p className="text-lg font-bold text-zinc-900 dark:text-zinc-50">$4,250.00</p>
-              </div>
+
+        <div className="w-full max-w-7xl mx-auto px-6 py-24 md:py-32 flex flex-col lg:flex-row items-center relative z-10">
+          <div className="lg:w-1/2 space-y-8 z-10 text-center lg:text-left">
+            <div className="inline-flex items-center space-x-2 bg-background/80 dark:bg-background/50 border border-border/50 rounded-full px-4 py-1.5 text-sm font-medium backdrop-blur-md shadow-sm">
+              <SparklesIcon className="w-4 h-4 text-primary" />
+              <span>Now with Tareza AI Insights</span>
             </div>
             
-            <div className="absolute -right-6 top-16 bg-secondary text-white p-4 rounded-xl shadow-xl border border-secondary/50 flex items-center space-x-3 hidden md:flex animate-in slide-in-from-right-5 duration-1000 delay-500">
-              <div className="bg-primary/20 p-2 rounded-lg text-primary">
-                <SparklesIcon className="w-5 h-5" />
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tighter leading-[1.1] text-zinc-900 dark:text-zinc-50 drop-shadow-sm">
+              The Intelligent <br className="hidden md:block" />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-amber-600 drop-shadow-none">
+                Business OS
+              </span>
+            </h1>
+            
+            <p className="text-xl text-zinc-600 dark:text-zinc-300 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-medium">
+              Powering African commerce. Point of Sale, multi-branch inventory, 
+              accounting, and AI forecasting—all in one enterprise-grade platform.
+            </p>
+            
+            <div className="flex flex-col sm:flex-row items-center justify-center lg:justify-start space-y-4 sm:space-y-0 sm:space-x-4 pt-4">
+              <Link to="/login">
+                <Button size="lg" className="h-14 px-8 text-base font-bold w-full sm:w-auto shadow-lg shadow-primary/25">
+                  Start your 14-day free trial
+                </Button>
+              </Link>
+              <Button size="lg" variant="outline" className="h-14 px-8 text-base font-bold w-full sm:w-auto bg-background/50 backdrop-blur-md border-border hover:bg-background/80">
+                Book a Demo
+              </Button>
+            </div>
+            <p className="text-sm text-zinc-500 font-medium">No credit card required. Cancel anytime.</p>
+          </div>
+          
+          <div className="lg:w-1/2 mt-16 lg:mt-0 relative z-10">
+            <div className="relative rounded-2xl overflow-hidden border border-border/50 shadow-2xl glass-effect p-2 bg-gradient-to-br from-white/40 to-white/10 dark:from-zinc-900/80 dark:to-zinc-950/80 backdrop-blur-xl">
+              <div className="rounded-xl overflow-hidden shadow-inner relative aspect-video bg-zinc-900">
+                <video 
+                  autoPlay 
+                  loop 
+                  muted 
+                  playsInline 
+                  className="w-full h-full object-cover scale-105"
+                >
+                  <source src="https://assets.mixkit.co/videos/preview/mixkit-business-dashboard-in-a-computer-screen-41764-large.mp4" type="video/mp4" />
+                </video>
               </div>
-              <div>
-                <p className="text-xs font-bold text-primary uppercase">Tareza AI</p>
-                <p className="text-sm font-medium text-zinc-200">Reorder Mazoe 2L now</p>
+
+              {/* Floating KPI Cards */}
+              <div className="absolute -left-6 bottom-12 bg-background/95 backdrop-blur shadow-xl border border-border/50 p-4 rounded-xl flex items-center space-x-3 hidden md:flex animate-in slide-in-from-bottom-5 duration-1000 delay-300">
+                <div className="bg-emerald-100 dark:bg-emerald-900/30 p-2 rounded-lg text-emerald-600">
+                  <TrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-zinc-500 uppercase">Daily Revenue</p>
+                  <p className="text-lg font-bold text-zinc-900 dark:text-zinc-50">$4,250.00</p>
+                </div>
+              </div>
+              
+              <div className="absolute -right-6 top-16 bg-secondary text-white p-4 rounded-xl shadow-xl border border-secondary/50 flex items-center space-x-3 hidden md:flex animate-in slide-in-from-right-5 duration-1000 delay-500">
+                <div className="bg-primary/20 p-2 rounded-lg text-primary">
+                  <SparklesIcon className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="text-xs font-bold text-primary uppercase">Tareza AI</p>
+                  <p className="text-sm font-medium text-zinc-200">Reorder Mazoe 2L now</p>
+                </div>
               </div>
             </div>
           </div>

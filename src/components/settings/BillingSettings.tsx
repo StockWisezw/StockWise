@@ -2,119 +2,190 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Check, AlertTriangle, CreditCard } from 'lucide-react';
+import { Check, AlertTriangle, CreditCard, ChevronRight, Download, HelpCircle } from 'lucide-react';
+import { Table, TableHead, TableHeader, TableRow, TableCell, TableBody } from '../ui/table';
 
 export function BillingSettings() {
-  // In a real app we would load the current plan from supabase' businesses table 
-  // Let's implement the UI for them to see what it requires
-  
   const planStatus = 'GRACE_PERIOD';
-  const expiresAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // 2 days ago
+  const expiresAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); 
   const gracePeriodEnd = new Date(expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000);
   const daysLeftInGrace = Math.floor((gracePeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
   
   return (
-    <div className="space-y-6">
-      <div>
-        <h3 className="text-lg font-medium">Billing & Subscription</h3>
-        <p className="text-sm text-zinc-500">Manage your subscription plan, branches, and user limits.</p>
+    <div className="space-y-8 animate-in fade-in duration-500">
+      <div className="flex justify-between items-center">
+        <div>
+          <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Billing & Subscription</h3>
+          <p className="text-sm text-zinc-500 mt-1">Manage your subscription plan, branches, and user limits.</p>
+        </div>
+        <Button variant="outline" className="text-zinc-600">
+          <HelpCircle className="w-4 h-4 mr-2" /> Billing Support
+        </Button>
       </div>
 
-      <Card className={planStatus === 'GRACE_PERIOD' ? 'border-amber-300 bg-amber-50' : ''}>
-        <CardHeader>
-          <div className="flex justify-between items-start">
+      <Card className={`border shadow-sm overflow-hidden ${planStatus === 'GRACE_PERIOD' ? 'border-amber-200/60 bg-amber-50/30' : 'border-zinc-200/60 bg-white'}`}>
+        <CardHeader className="pb-4 border-b border-zinc-100/50 bg-white">
+          <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-4">
             <div>
-              <CardTitle className="flex items-center gap-2">
-                Current Status: <Badge variant={planStatus === 'ACTIVE' ? 'default' : 'destructive'} className="uppercase">{'STARTER - OVERDUE'}</Badge>
-              </CardTitle>
-              <CardDescription className={planStatus === 'GRACE_PERIOD' ? "text-amber-700 mt-2" : "mt-2"}>
+              <div className="flex items-center gap-3">
+                <CardTitle className="text-lg">Subscription Overview</CardTitle>
+                <Badge variant={planStatus === 'ACTIVE' ? 'default' : 'destructive'} className={`${planStatus === 'GRACE_PERIOD' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100' : ''} uppercase tracking-wider text-[10px]`}>
+                  {planStatus === 'GRACE_PERIOD' ? 'Payment Overdue' : 'Active'}
+                </Badge>
+              </div>
+              <CardDescription className={planStatus === 'GRACE_PERIOD' ? "text-amber-700 font-medium mt-1.5 flex items-center" : "mt-1.5"}>
                 {planStatus === 'GRACE_PERIOD' ? (
-                  <span className="flex items-center gap-2 font-medium">
-                    <AlertTriangle className="h-4 w-4" /> You are in a 7-day grace period. {daysLeftInGrace} days left before account is locked.
-                  </span>
+                  <>
+                    <AlertTriangle className="h-4 w-4 mr-1.5" /> 
+                    Grace period ends in {daysLeftInGrace} days. System will lock automatically.
+                  </>
                 ) : (
                   `Your subscription is active.`
                 )}
               </CardDescription>
             </div>
-            <Button variant="outline"><CreditCard className="w-4 h-4 mr-2" /> Update Payment Method</Button>
+            <Button variant="outline" className="shrink-0 bg-white shadow-sm border-zinc-200 hover:bg-zinc-50">
+               <CreditCard className="w-4 h-4 mr-2 text-zinc-400" /> Manage Payment Method
+            </Button>
           </div>
         </CardHeader>
+        <CardContent className="p-0">
+           <div className="grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-zinc-100 bg-white">
+              <div className="p-6 flex flex-col justify-center">
+                 <p className="text-sm font-medium text-zinc-500 mb-1">Current Plan</p>
+                 <div className="flex items-end gap-2">
+                   <h4 className="text-2xl font-bold text-zinc-900">Pro Tier</h4>
+                 </div>
+              </div>
+              <div className="p-6 flex flex-col justify-center">
+                 <p className="text-sm font-medium text-zinc-500 mb-1">Seat Usage</p>
+                 <div className="flex items-end gap-2">
+                   <h4 className="text-2xl font-bold text-zinc-900">4 <span className="text-lg font-medium text-zinc-400">/ 10</span></h4>
+                 </div>
+                 <div className="w-full h-1.5 bg-zinc-100 rounded-full mt-3 overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: '40%' }} />
+                 </div>
+              </div>
+              <div className="p-6 flex flex-col justify-center">
+                 <p className="text-sm font-medium text-zinc-500 mb-1">Billing Cycle</p>
+                 <div className="flex items-end gap-2">
+                   <h4 className="text-xl font-bold text-zinc-900">$45.00 <span className="text-sm font-medium text-zinc-400">/mo</span></h4>
+                 </div>
+                 <p className="text-xs text-zinc-500 mt-2 font-medium">Billed on the 1st of every month.</p>
+              </div>
+           </div>
+        </CardContent>
       </Card>
 
-      <div className="grid md:grid-cols-3 gap-6">
-        {/* Starter Plan */}
-        <Card className="relative overflow-hidden border-zinc-200">
-          <CardHeader>
-            <CardTitle>Starter</CardTitle>
-            <div className="mt-4 flex items-baseline text-4xl font-extrabold">
-              $15
-              <span className="ml-1 text-xl font-medium text-zinc-500">/mo</span>
-            </div>
-            <CardDescription className="pt-2">Perfect for small, single-location shops.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-3 shrink-0">
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> 1 Branch / Warehouse</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> 2 User Accounts</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> All Core Modules</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Standard Support</li>
-            </ul>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full">Upgrade to Starter</Button>
-          </CardFooter>
-        </Card>
+      <div className="space-y-4">
+        <h4 className="text-sm font-bold text-zinc-900 uppercase tracking-widest px-1">Available Plans</h4>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <Card className="relative overflow-hidden border-zinc-200 shadow-sm flex flex-col">
+            <CardHeader className="bg-zinc-50/50 pb-6 border-b border-zinc-100">
+              <CardTitle className="text-lg font-bold text-zinc-800">Starter</CardTitle>
+              <div className="mt-4 flex items-baseline text-4xl font-extrabold text-zinc-900 tracking-tight">
+                $15
+                <span className="ml-1 text-base font-medium text-zinc-500">/mo</span>
+              </div>
+              <CardDescription className="pt-3 text-zinc-600 leading-relaxed font-medium">Perfect for small, single-location shops or kiosks.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4 flex-1">
+              <ul className="space-y-3 shrink-0 text-sm">
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> <span className="text-zinc-600 font-medium">1 Branch / Warehouse</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> <span className="text-zinc-600 font-medium">2 User Accounts</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> <span className="text-zinc-600 font-medium">Core POS & Inventory</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> <span className="text-zinc-600 font-medium">Standard Support</span></li>
+              </ul>
+            </CardContent>
+            <CardFooter className="pt-6 border-t border-zinc-100">
+              <Button variant="outline" className="w-full border-zinc-200 text-zinc-700 hover:bg-zinc-50">Downgrade to Starter</Button>
+            </CardFooter>
+          </Card>
 
-        {/* Pro Plan */}
-        <Card className="relative overflow-hidden border-primary shadow-lg scale-[1.02]">
-          <div className="absolute top-0 right-[-2.5rem] bg-primary text-primary-foreground text-xs font-bold px-10 py-1 rotate-45">
-            POPULAR
-          </div>
-          <CardHeader>
-            <CardTitle>Pro</CardTitle>
-            <div className="mt-4 flex items-baseline text-4xl font-extrabold">
-              $45
-              <span className="ml-1 text-xl font-medium text-zinc-500">/mo</span>
+          <Card className="relative overflow-hidden border-primary/50 shadow-md flex flex-col scale-[1.02] bg-white ring-1 ring-primary/20">
+            <div className="absolute top-0 right-0 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-1 uppercase tracking-widest rounded-bl-lg">
+              Current Plan
             </div>
-            <CardDescription className="pt-2">For growing multi-location retailers.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-3 shrink-0">
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Up to 3 Branches</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> up to 10 User Accounts</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> All Core Modules</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> ZIMRA Fiscalisation</li>
-            </ul>
-          </CardContent>
-          <CardFooter>
-            <Button className="w-full bg-primary text-primary-foreground hover:bg-primary/90">Upgrade to Pro</Button>
-          </CardFooter>
-        </Card>
+            <CardHeader className="bg-primary/5 pb-6 border-b border-primary/10">
+              <CardTitle className="text-lg font-bold text-primary">Pro</CardTitle>
+              <div className="mt-4 flex items-baseline text-4xl font-extrabold text-zinc-900 tracking-tight">
+                $45
+                <span className="ml-1 text-base font-medium text-zinc-500">/mo</span>
+              </div>
+              <CardDescription className="pt-3 text-zinc-600 leading-relaxed font-medium">Built for growing multi-location retailers.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4 flex-1">
+              <ul className="space-y-3 shrink-0 text-sm">
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-primary shrink-0" /> <span className="text-zinc-800 font-medium">Up to 3 Branches</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-primary shrink-0" /> <span className="text-zinc-800 font-medium">Up to 10 User Accounts</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-primary shrink-0" /> <span className="text-zinc-800 font-medium">Advanced Reporting</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-primary shrink-0" /> <span className="text-zinc-800 font-medium">ZIMRA Fiscalisation</span></li>
+              </ul>
+            </CardContent>
+            <CardFooter className="pt-6 border-t border-primary/10">
+              <Button className="w-full font-semibold shadow-sm" disabled>Current Plan</Button>
+            </CardFooter>
+          </Card>
 
-        {/* Enterprise Plan */}
-        <Card className="relative overflow-hidden border-zinc-200">
-          <CardHeader>
-            <CardTitle>Enterprise</CardTitle>
-            <div className="mt-4 flex items-baseline text-4xl font-extrabold">
-              $99
-              <span className="ml-1 text-xl font-medium text-zinc-500">/mo</span>
-            </div>
-            <CardDescription className="pt-2">Unlimited power for huge operations.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <ul className="space-y-3 shrink-0">
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Unlimited Branches</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Unlimited Users</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Custom API Access</li>
-              <li className="flex items-center gap-2"><Check className="h-4 w-4 text-primary" /> Priority 24/7 Support</li>
-            </ul>
-          </CardContent>
-          <CardFooter>
-            <Button variant="outline" className="w-full">Upgrade to Enterprise</Button>
-          </CardFooter>
-        </Card>
+          <Card className="relative overflow-hidden border-zinc-200 shadow-sm flex flex-col">
+            <CardHeader className="bg-zinc-50/50 pb-6 border-b border-zinc-100">
+              <CardTitle className="text-lg font-bold text-zinc-800">Enterprise</CardTitle>
+              <div className="mt-4 flex items-baseline text-4xl font-extrabold text-zinc-900 tracking-tight">
+                $99
+                <span className="ml-1 text-base font-medium text-zinc-500">/mo</span>
+              </div>
+              <CardDescription className="pt-3 text-zinc-600 leading-relaxed font-medium">Unlimited limits for huge volume operations.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6 space-y-4 flex-1">
+              <ul className="space-y-3 shrink-0 text-sm">
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> <span className="text-zinc-600 font-medium">Unlimited Branches</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> <span className="text-zinc-600 font-medium">Unlimited Users</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> <span className="text-zinc-600 font-medium">Custom API Access</span></li>
+                <li className="flex items-center gap-3"><Check className="h-4 w-4 text-emerald-500 shrink-0" /> <span className="text-zinc-600 font-medium">Priority 24/7 Support</span></li>
+              </ul>
+            </CardContent>
+            <CardFooter className="pt-6 border-t border-zinc-100">
+              <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800 shadow-sm">Upgrade to Enterprise</Button>
+            </CardFooter>
+          </Card>
+        </div>
       </div>
+
+      <Card className="border-zinc-200/60 shadow-sm overflow-hidden">
+         <CardHeader className="pb-4 border-b border-zinc-100 bg-zinc-50/50">
+           <CardTitle className="text-lg">Billing History</CardTitle>
+           <CardDescription>View and download past invoices.</CardDescription>
+         </CardHeader>
+         <div className="overflow-x-auto">
+            <Table>
+               <TableHeader className="bg-zinc-50/50">
+                  <TableRow>
+                     <TableHead className="w-[150px]">Date</TableHead>
+                     <TableHead>Invoice ID</TableHead>
+                     <TableHead>Amount</TableHead>
+                     <TableHead>Status</TableHead>
+                     <TableHead className="text-right">Download</TableHead>
+                  </TableRow>
+               </TableHeader>
+               <TableBody>
+                  <TableRow className="group hover:bg-zinc-50/50">
+                     <TableCell className="font-medium text-zinc-900">Oct 1, 2024</TableCell>
+                     <TableCell className="text-zinc-500 font-mono text-sm">INV-2024-0042</TableCell>
+                     <TableCell className="text-zinc-800 font-medium">$45.00</TableCell>
+                     <TableCell><Badge variant="outline" className="bg-emerald-50 border-emerald-200 text-emerald-700">Paid</Badge></TableCell>
+                     <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-zinc-900"><Download className="w-4 h-4" /></Button></TableCell>
+                  </TableRow>
+                  <TableRow className="group hover:bg-zinc-50/50">
+                     <TableCell className="font-medium text-zinc-900">Sep 1, 2024</TableCell>
+                     <TableCell className="text-zinc-500 font-mono text-sm">INV-2024-0038</TableCell>
+                     <TableCell className="text-zinc-800 font-medium">$45.00</TableCell>
+                     <TableCell><Badge variant="outline" className="bg-emerald-50 border-emerald-200 text-emerald-700">Paid</Badge></TableCell>
+                     <TableCell className="text-right"><Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-zinc-900"><Download className="w-4 h-4" /></Button></TableCell>
+                  </TableRow>
+               </TableBody>
+            </Table>
+         </div>
+      </Card>
     </div>
   );
 }
