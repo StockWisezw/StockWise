@@ -111,13 +111,25 @@ export default function POS() {
           ]);
         }
       } catch (err) {
-        console.error("Error loading POS data: ", err);
+        console.error("Failed to load POS data: ", err);
       } finally {
         setIsLoading(false);
       }
     };
-    
+
     loadData();
+    
+    // Subscribe to realtime product changes in POS
+    const channel = supabase
+      .channel('pos_products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        loadData(); // Re-fetch products when a change occurs
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   // Keyboard Shortcuts

@@ -68,6 +68,18 @@ export function ProductList() {
 
   useEffect(() => {
     fetchProducts();
+
+    // Subscribe to realtime changes on products
+    const channel = supabase
+      .channel('public:products')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
+        fetchProducts(); // Refresh list on change
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const handleDelete = async (id: string) => {
@@ -81,6 +93,7 @@ export function ProductList() {
       const { error } = await supabase.from('products').update({ is_active: false }).eq('id', id);
       if (error) throw error;
       toast.success("Product deleted successfully");
+      // fetchProducts() will be called automatically by Realtime if active
       fetchProducts();
     } catch (err) {
       toast.error("Could not delete product");
@@ -93,9 +106,21 @@ export function ProductList() {
        return;
     }
     try {
-       // Since we don't have business_id context easily, if Supabase insert fails due to required FK, we mock it
+       // Fetch user's business_id
+       const { data: businessData, error: businessError } = await supabase
+         .from('business_users')
+         .select('business_id')
+         .limit(1)
+         .single();
+
+       if (businessError || !businessData) {
+         toast.error("You are not part of any business. Cannot add product.");
+         return;
+       }
+
        const price = parseFloat(newProductPrice);
-       const { data, error } = await supabase.from('products').insert({
+       const { data: newProduct, error: productError } = await supabase.from('products').insert({
+         business_id: businessData.business_id,
          name: newProductName,
          sku: newProductSKU,
          retail_price: price,
@@ -103,29 +128,39 @@ export function ProductList() {
          is_active: true
        }).select().single();
 
-       if (error) throw error;
-       toast.success("Product added");
+       if (productError) throw productError;
+
+       // Set initial stock if required
+       const stock = parseInt(newProductStock, 10);
+       if (stock > 0) {
+         const { data: branchData } = await supabase
+           .from('branches')
+           .select('id')
+           .eq('business_id', businessData.business_id)
+           .limit(1)
+           .single();
+           
+         if (branchData) {
+           await supabase.from('inventory').insert({
+             business_id: businessData.business_id,
+             branch_id: branchData.id,
+             product_id: newProduct.id,
+             quantity: stock
+           });
+         }
+       }
+
+       toast.success("Product added successfully");
        setIsAddOpen(false);
        setNewProductName('');
        setNewProductPrice('');
        setNewProductSKU('');
+       setNewProductStock('0');
+       // fetchProducts() is also called by Realtime, but calling it here is fine as fallback
        fetchProducts();
-    } catch (err) {
-       console.error("Supabase insert error, falling back to local state", err);
-       const mockNewProduct = {
-          id: Math.random().toString(36).substring(7),
-          name: newProductName,
-          sku: newProductSKU,
-          retail_price: parseFloat(newProductPrice),
-          wholesale_price: parseFloat(newProductPrice) * 0.9,
-          inventory: [{quantity: parseInt(newProductStock, 10)}]
-       };
-       setProducts(prev => [mockNewProduct, ...prev]);
-       toast.success("Product added (Local Demo)");
-       setIsAddOpen(false);
-       setNewProductName('');
-       setNewProductPrice('');
-       setNewProductSKU('');
+    } catch (err: any) {
+       console.error("Supabase insert error", err);
+       toast.error(`Error adding product: ${err.message || 'Unknown error'}`);
     }
   };
 

@@ -521,6 +521,22 @@ WITH CHECK (business_id IN (SELECT auth_user_businesses()));
 -- and tighten permissions based on the user's specific `branch_id` and `role_id` 
 -- tracked via the `business_users` table.
 
+-- ==========================================
+-- 11. ENABLE REALTIME
+-- ==========================================
+BEGIN;
+  DROP PUBLICATION IF EXISTS supabase_realtime;
+  CREATE PUBLICATION supabase_realtime;
+COMMIT;
+
+ALTER PUBLICATION supabase_realtime ADD TABLE businesses;
+ALTER PUBLICATION supabase_realtime ADD TABLE branches;
+ALTER PUBLICATION supabase_realtime ADD TABLE products;
+ALTER PUBLICATION supabase_realtime ADD TABLE inventory;
+ALTER PUBLICATION supabase_realtime ADD TABLE customers;
+ALTER PUBLICATION supabase_realtime ADD TABLE sales;
+ALTER PUBLICATION supabase_realtime ADD TABLE sale_items;
+
 
 -- ==========================================
 -- File: 0002_advanced_pos.sql
