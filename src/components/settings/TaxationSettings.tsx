@@ -8,11 +8,7 @@ import { Badge } from '../ui/badge';
 import { Plus, Calculator, Edit2, Percent } from 'lucide-react';
 import { toast } from 'sonner';
 
-const mockTaxRates = [
-  { id: '1', name: 'VAT Standard', rate: 15.0, type: 'Percentage', isDefault: true, isActive: true },
-  { id: '2', name: 'VAT Zero', rate: 0.0, type: 'Percentage', isDefault: false, isActive: true },
-  { id: '3', name: 'Exempt', rate: 0.0, type: 'Percentage', isDefault: false, isActive: true },
-];
+const mockTaxRates: any[] = [];
 
 export function TaxationSettings() {
   const [isAdding, setIsAdding] = useState(false);

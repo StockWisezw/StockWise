@@ -81,17 +81,7 @@ export default function POS() {
             imageUrl: 'https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=150&h=150&fit=crop', // Default image
           })));
         } else {
-          // Fallback static mock data for demo if DB is empty
-          setProducts([
-            { id: '1', name: 'Mazoe Orange Crush 2L', retailPrice: 4.50, wholesalePrice: 4.10, barcode: '600123456789', sku: 'BV-MOC-2L', taxClass: 'standard', category: 'beverages', imageUrl: 'https://images.unsplash.com/photo-1622483767028-3f66f32aef97?w=300&h=300&fit=crop' },
-            { id: '2', name: 'Bakers Blue Label Marie 200g', retailPrice: 1.20, wholesalePrice: 1.05, barcode: '600987654321', sku: 'BK-MAR-200G', taxClass: 'standard', category: 'snacks', imageUrl: 'https://images.unsplash.com/photo-1558961363-fa8fdf82db35?w=300&h=300&fit=crop' },
-            { id: '3', name: 'Panadol 500mg 20s', retailPrice: 2.50, wholesalePrice: 2.10, barcode: '500123456', sku: 'MD-PAN-500MG', taxClass: 'exempt', category: 'pharmacy', imageUrl: 'https://images.unsplash.com/photo-1584308666744-24d5e4a8dfd1?w=300&h=300&fit=crop' },
-            { id: '4', name: 'Coca-Cola 330ml Can', retailPrice: 0.80, wholesalePrice: 0.65, barcode: '5449000000996', sku: 'BV-COK-330ML', taxClass: 'standard', category: 'beverages', imageUrl: 'https://images.unsplash.com/photo-1622483767851-4602f23b2c65?w=300&h=300&fit=crop' },
-            { id: '5', name: 'Willards Things 150g', retailPrice: 1.50, wholesalePrice: 1.30, barcode: '6002345678912', sku: 'SN-WIL-150G', taxClass: 'standard', category: 'snacks', imageUrl: 'https://images.unsplash.com/photo-1599490659213-e2b9527bd087?w=300&h=300&fit=crop' },
-            { id: '6', name: 'Paracetamol 100s', retailPrice: 5.00, wholesalePrice: 4.00, barcode: '500987654', sku: 'MD-PAR-100S', taxClass: 'exempt', category: 'pharmacy', imageUrl: 'https://images.unsplash.com/photo-1596562479577-ba8bd5b5f25a?w=300&h=300&fit=crop' },
-            { id: '7', name: 'Lays Salt & Vinegar 120g', retailPrice: 2.00, wholesalePrice: 1.80, barcode: '6002345671234', sku: 'SN-LAY-120G', taxClass: 'standard', category: 'snacks', imageUrl: 'https://images.unsplash.com/photo-1566478989037-eade2e597c55?w=300&h=300&fit=crop' },
-            { id: '8', name: 'Sprite 2L', retailPrice: 2.20, wholesalePrice: 1.95, barcode: '5449000123456', sku: 'BV-SPR-2L', taxClass: 'standard', category: 'beverages', imageUrl: 'https://images.unsplash.com/photo-1625772299848-3a8309df07eb?w=300&h=300&fit=crop' },
-          ]);
+          setProducts([]);
         }
 
         if (customersData && customersData.length > 0) {
@@ -105,10 +95,7 @@ export default function POS() {
             creditLimit: c.credit_limit || 0
           })));
         } else {
-          setCustomers([
-            { id: '1', name: 'John Doe Walk-in', balance: 0, creditLimit: 0 },
-            { id: '2', name: 'Acme Supermarket', balance: 154.20, creditLimit: 1000 },
-          ]);
+          setCustomers([]);
         }
       } catch (err) {
         console.error("Failed to load POS data: ", err);

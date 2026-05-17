@@ -48,12 +48,7 @@ export function CustomerDirectory() {
       if (data && data.length > 0) {
         setCustomers(data);
       } else {
-        // Fallback for demo
-        setCustomers([
-          { id: 'CUS001', customer_type: 'wholesale', name: 'Delta Distributors Ltd', contact: 'John Smith', phone: '+263 77 123 4567', email: 'orders@delta.co.zw', balance: 4500.00, tier: 'VIP', status: 'ACTIVE' },
-          { id: 'CUS002', customer_type: 'retail', name: 'Memory Chirwa', contact: '-', phone: '+263 71 987 6543', email: 'memory.c@gmail.com', balance: 0.00, tier: 'GOLD', status: 'ACTIVE' },
-          { id: 'CUS003', customer_type: 'business', name: 'Sunrise Cafe', contact: 'Tendai Moyo', phone: '+263 73 444 5555', email: 'hello@sunrisecafe.com', balance: 120.50, tier: 'SILVER', status: 'ACTIVE' },
-        ]);
+        setCustomers([]);
       }
     } catch (err) {
       console.error(err);
@@ -69,13 +64,6 @@ export function CustomerDirectory() {
 
   const handleDelete = async (id: string) => {
     try {
-      // Demo fallback bypass
-      if(id.startsWith('CUS')) {
-         setCustomers(prev => prev.filter(c => c.id !== id));
-         setIsProfileOpen(false);
-         toast.success("Customer deleted (Local Demo)");
-         return;
-      }
       const { error } = await supabase.from('customers').delete().eq('id', id);
       if (error) throw error;
       toast.success("Customer deleted successfully");
@@ -92,7 +80,19 @@ export function CustomerDirectory() {
       return;
     }
     try {
+       const { data: businessData, error: businessError } = await supabase
+         .from('business_users')
+         .select('business_id')
+         .limit(1)
+         .single();
+
+       if (businessError || !businessData) {
+         toast.error("You are not part of any business. Cannot add customer.");
+         return;
+       }
+
       const { data, error } = await supabase.from('customers').insert({
+        business_id: businessData.business_id,
         name: newCustomerName,
         email: newCustomerEmail,
         phone: newCustomerPhone,
@@ -106,23 +106,9 @@ export function CustomerDirectory() {
       setNewCustomerEmail('');
       setNewCustomerPhone('');
       fetchCustomers();
-    } catch (err) {
-      console.error("Supabase insert error fallback", err);
-      const mockCustomer = {
-        id: `CUS${Math.floor(Math.random()*1000)}`,
-        name: newCustomerName,
-        email: newCustomerEmail,
-        phone: newCustomerPhone,
-        customer_type: 'retail',
-        balance: 0,
-        tier: 'STANDARD'
-      };
-      setCustomers(prev => [mockCustomer, ...prev]);
-      toast.success("Customer added (Local Demo)");
-      setIsAddOpen(false);
-      setNewCustomerName('');
-      setNewCustomerEmail('');
-      setNewCustomerPhone('');
+    } catch (err: any) {
+      console.error("Supabase insert error", err);
+      toast.error(`Error adding customer: ${err.message || 'Unknown error'}`);
     }
   };
 

@@ -2,15 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Activity, CreditCard, DollarSign, Package, Sparkles } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
-const data = [
-  { name: 'Mon', sales: 4000 },
-  { name: 'Tue', sales: 3000 },
-  { name: 'Wed', sales: 2000 },
-  { name: 'Thu', sales: 2780 },
-  { name: 'Fri', sales: 1890 },
-  { name: 'Sat', sales: 2390 },
-  { name: 'Sun', sales: 3490 },
-];
+const data: any[] = [];
 
 export default function Dashboard() {
   return (
@@ -31,9 +23,9 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">24,593.00</div>
-            <p className="text-sm text-emerald-600 mt-2 flex items-center font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span> +20.1% from yesterday
+            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">0.00</div>
+            <p className="text-sm text-zinc-400 mt-2 flex items-center font-medium">
+              No sales yet
             </p>
           </CardContent>
         </Card>
@@ -46,9 +38,9 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">145</div>
-            <p className="text-sm text-emerald-600 mt-2 flex items-center font-medium">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-2"></span> +4% from yesterday
+            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">0</div>
+            <p className="text-sm text-zinc-400 mt-2 flex items-center font-medium">
+              No transactions
             </p>
           </CardContent>
         </Card>
@@ -61,9 +53,9 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-red-600 font-mono tracking-tight">12</div>
-            <p className="text-sm text-zinc-500 mt-2 font-medium">
-              Items need reordering
+            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">0</div>
+            <p className="text-sm text-zinc-400 mt-2 flex items-center font-medium">
+              All items in stock
             </p>
           </CardContent>
         </Card>
@@ -76,9 +68,9 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">3</div>
-            <p className="text-sm text-zinc-500 mt-2 font-medium">
-              Harare, Bulawayo, Mutare
+            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">0</div>
+            <p className="text-sm text-zinc-400 mt-2 font-medium">
+              No active branches
             </p>
           </CardContent>
         </Card>

@@ -16,17 +16,11 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
-const mockSuppliers = [
-  { id: 'SUP001', name: 'National Foods Ltd', category: 'Groceries', contact: 'John Smith', phone: '+263 77 111 2222', email: 'sales@natfoods.co.zw', balance: 15400.00, status: 'ACTIVE', terms: 'Net 30' },
-  { id: 'SUP002', name: 'Delta Beverages', category: 'Beverages', contact: 'Sarah Mutemeri', phone: '+263 71 333 4444', email: 'orders@delta.co.zw', balance: 8200.00, status: 'ACTIVE', terms: 'COD' },
-  { id: 'SUP003', name: 'ProBrands ZW', category: 'FMCG', contact: 'Tendai Moyo', phone: '+263 73 555 6666', email: 'sales@probrands.co.zw', balance: 0.00, status: 'ACTIVE', terms: 'Net 15' },
-  { id: 'SUP004', name: 'ZimOil Traders', category: 'Groceries', contact: '-', phone: '+263 78 777 8888', email: 'info@zimoil.co.zw', balance: 4500.00, status: 'ACTIVE', terms: 'Net 30' },
-  { id: 'SUP005', name: 'Import Traders Hub', category: 'General', contact: 'Mark Ndlovu', phone: '+263 77 999 0000', email: 'mark@ith.co.zw', balance: 0.00, status: 'INACTIVE', terms: 'Prepaid' },
-];
+const mockSuppliers: any[] = [];
 
 export function SupplierDirectory() {
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedSupplier, setSelectedSupplier] = useState(mockSuppliers[0]);
+  const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const openProfile = (sup: any) => {

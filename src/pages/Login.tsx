@@ -19,13 +19,6 @@ export default function Login() {
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // For demo purposes in AI Studio if Supabase is not configured yet
-    if (import.meta.env.VITE_SUPABASE_URL === 'https://your-project.supabase.co' || !import.meta.env.VITE_SUPABASE_URL) {
-      toast.success(isSignUp ? 'Demo sign up successful' : 'Demo login successful');
-      navigate('/dashboard');
-      return;
-    }
-
     setLoading(true);
     let authError = null;
 

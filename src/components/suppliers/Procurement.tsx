@@ -13,12 +13,7 @@ import {
   TableCell,
 } from '../ui/table';
 
-const mockPOs = [
-  { id: 'PO-2024-089', supplier: 'National Foods Ltd', date: 'Oct 24, 2024', expected: 'Oct 26, 2024', total: 4500.00, status: 'APPROVED', items: 12 },
-  { id: 'PO-2024-088', supplier: 'Delta Beverages', date: 'Oct 23, 2024', expected: 'Oct 24, 2024', total: 1250.00, status: 'RECEIVING', items: 4 },
-  { id: 'PO-2024-087', supplier: 'ZimOil Traders', date: 'Oct 20, 2024', expected: 'Oct 21, 2024', total: 3200.00, status: 'RECEIVED', items: 2 },
-  { id: 'PO-2024-086', supplier: 'ProBrands ZW', date: 'Oct 19, 2024', expected: 'Oct 25, 2024', total: 850.00, status: 'DRAFT', items: 8 },
-];
+const mockPOs: any[] = [];
 
 export function Procurement() {
   const [searchTerm, setSearchTerm] = useState('');

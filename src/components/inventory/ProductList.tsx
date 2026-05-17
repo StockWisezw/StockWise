@@ -50,13 +50,7 @@ export function ProductList() {
       if (data && data.length > 0) {
         setProducts(data);
       } else {
-        // Fallback for demo
-        setProducts([
-          { id: '1', sku: 'BV-MOC-2L', barcode: '600123456789', name: 'Mazoe Orange Crush 2L', categories: { name: 'Beverages' }, inventory: [{quantity: 145}], retail_price: 4.50, wholesale_price: 3.80 },
-          { id: '2', sku: 'BK-MAR-200G', barcode: '600987654321', name: 'Bakers Blue Label Marie 200g', categories: { name: 'Snacks' }, inventory: [{quantity: 14}], retail_price: 1.20, wholesale_price: 1.00},
-          { id: '3', sku: 'MD-PAN-500MG', barcode: '600555444333', name: 'Panadol 500mg 20s', categories: { name: 'Pharmacy' }, inventory: [{quantity: 5}], retail_price: 2.50, wholesale_price: 2.00 },
-          { id: '4', sku: 'AL-ZAM-340ML', barcode: '600111222333', name: 'Zambezi Lager 340ml', categories: { name: 'Alcohol' }, inventory: [{quantity: 320}], retail_price: 1.50, wholesale_price: 1.20 },
-        ]);
+        setProducts([]);
       }
     } catch (err) {
       console.error(err);
@@ -84,12 +78,6 @@ export function ProductList() {
 
   const handleDelete = async (id: string) => {
     try {
-      // In demo mode without actual UUIDs, this might fail, fallback gracefully
-      if(id.length < 5) {
-         setProducts(prev => prev.filter(p => p.id !== id));
-         toast.success("Product deleted successfully (Local Demo)");
-         return;
-      }
       const { error } = await supabase.from('products').update({ is_active: false }).eq('id', id);
       if (error) throw error;
       toast.success("Product deleted successfully");

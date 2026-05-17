@@ -24,9 +24,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { user, loading } = useAuth();
   
   if (loading) return <div className="h-screen w-full flex items-center justify-center">Loading...</div>;
-  if (!user && import.meta.env.VITE_SUPABASE_URL !== 'https://your-project.supabase.co') {
-     if(import.meta.env.VITE_SUPABASE_URL) return <Navigate to="/login" />;
-  }
+  if (!user) return <Navigate to="/login" />;
   
   return <>{children}</>;
 };
