@@ -15,12 +15,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Auth Helper function to get the current user's business IDs for RLS
-CREATE OR REPLACE FUNCTION auth_user_businesses()
-RETURNS SETOF UUID AS $$
-  SELECT business_id FROM public.business_users WHERE user_id = auth.uid() AND deleted_at IS NULL;
-$$ LANGUAGE sql STABLE;
-
 -- ==========================================
 -- 1. CORE TENANT MODULES
 -- ==========================================
@@ -99,6 +93,12 @@ CREATE TABLE business_users (
     deleted_at TIMESTAMPTZ,
     UNIQUE(business_id, user_id)
 );
+
+-- Auth Helper function to get the current user's business IDs for RLS
+CREATE OR REPLACE FUNCTION auth_user_businesses()
+RETURNS SETOF UUID AS $$
+  SELECT business_id FROM public.business_users WHERE user_id = auth.uid() AND deleted_at IS NULL;
+$$ LANGUAGE sql STABLE;
 
 -- ==========================================
 -- 3. INVENTORY & PRODUCT MANAGEMENT

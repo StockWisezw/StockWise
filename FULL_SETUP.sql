@@ -1,3 +1,65 @@
+-- ==========================================
+-- DROPS PREVIOUS TABLES TO PREVENT 'ALREADY EXISTS' ERRORS
+-- ==========================================
+DROP TABLE IF EXISTS businesses CASCADE;
+DROP TABLE IF EXISTS branches CASCADE;
+DROP TABLE IF EXISTS profiles CASCADE;
+DROP TABLE IF EXISTS roles CASCADE;
+DROP TABLE IF EXISTS role_permissions CASCADE;
+DROP TABLE IF EXISTS business_users CASCADE;
+DROP TABLE IF EXISTS categories CASCADE;
+DROP TABLE IF EXISTS products CASCADE;
+DROP TABLE IF EXISTS inventory CASCADE;
+DROP TABLE IF EXISTS stock_movements CASCADE;
+DROP TABLE IF EXISTS stocktakes CASCADE;
+DROP TABLE IF EXISTS stocktake_items CASCADE;
+DROP TABLE IF EXISTS customers CASCADE;
+DROP TABLE IF EXISTS suppliers CASCADE;
+DROP TABLE IF EXISTS sales CASCADE;
+DROP TABLE IF EXISTS sale_items CASCADE;
+DROP TABLE IF EXISTS purchases CASCADE;
+DROP TABLE IF EXISTS purchase_items CASCADE;
+DROP TABLE IF EXISTS expenses CASCADE;
+DROP TABLE IF EXISTS fiscal_receipts CASCADE;
+DROP TABLE IF EXISTS audit_logs CASCADE;
+DROP TABLE IF EXISTS subscriptions CASCADE;
+DROP TABLE IF EXISTS customer_credit_accounts CASCADE;
+DROP TABLE IF EXISTS customer_credit_transactions CASCADE;
+DROP TABLE IF EXISTS refunds CASCADE;
+DROP TABLE IF EXISTS refund_items CASCADE;
+DROP TABLE IF EXISTS price_overrides CASCADE;
+DROP TABLE IF EXISTS products_advanced CASCADE;
+DROP TABLE IF EXISTS inventory_levels CASCADE;
+DROP TABLE IF EXISTS inventory_transfers CASCADE;
+DROP TABLE IF EXISTS customers_crm CASCADE;
+DROP TABLE IF EXISTS customer_activities CASCADE;
+DROP TABLE IF EXISTS customer_loyalty_transactions CASCADE;
+DROP TABLE IF EXISTS customer_communications CASCADE;
+DROP TABLE IF EXISTS suppliers_advanced CASCADE;
+DROP TABLE IF EXISTS purchase_orders CASCADE;
+DROP TABLE IF EXISTS purchase_order_items CASCADE;
+DROP TABLE IF EXISTS goods_received_notes CASCADE;
+DROP TABLE IF EXISTS grn_items CASCADE;
+DROP TABLE IF EXISTS supplier_ledgers CASCADE;
+DROP TABLE IF EXISTS supplier_payments CASCADE;
+DROP TABLE IF EXISTS supplier_returns CASCADE;
+DROP TABLE IF EXISTS currencies CASCADE;
+DROP TABLE IF EXISTS tax_rates CASCADE;
+DROP TABLE IF EXISTS payment_methods CASCADE;
+DROP TABLE IF EXISTS fiscal_settings CASCADE;
+DROP TABLE IF EXISTS chat_channels CASCADE;
+DROP TABLE IF EXISTS chat_messages CASCADE;
+DROP TABLE IF EXISTS exchange_rate_history CASCADE;
+DROP TABLE IF EXISTS notification_settings CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS pos_settings CASCADE;
+DROP TABLE IF EXISTS security_settings CASCADE;
+
+DROP TYPE IF EXISTS movement_type CASCADE;
+
+DROP FUNCTION IF EXISTS auth_user_businesses() CASCADE;
+DROP FUNCTION IF EXISTS trigger_set_timestamp() CASCADE;
+DROP FUNCTION IF EXISTS initialize_business_defaults() CASCADE;
 
 
 -- ==========================================
@@ -20,12 +82,6 @@ BEGIN
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql;
-
--- Auth Helper function to get the current user's business IDs for RLS
-CREATE OR REPLACE FUNCTION auth_user_businesses()
-RETURNS SETOF UUID AS $$
-  SELECT business_id FROM public.business_users WHERE user_id = auth.uid() AND deleted_at IS NULL;
-$$ LANGUAGE sql STABLE;
 
 -- ==========================================
 -- 1. CORE TENANT MODULES
@@ -105,6 +161,12 @@ CREATE TABLE business_users (
     deleted_at TIMESTAMPTZ,
     UNIQUE(business_id, user_id)
 );
+
+-- Auth Helper function to get the current user's business IDs for RLS
+CREATE OR REPLACE FUNCTION auth_user_businesses()
+RETURNS SETOF UUID AS $$
+  SELECT business_id FROM public.business_users WHERE user_id = auth.uid() AND deleted_at IS NULL;
+$$ LANGUAGE sql STABLE;
 
 -- ==========================================
 -- 3. INVENTORY & PRODUCT MANAGEMENT
