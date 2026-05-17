@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, Filter, MoreHorizontal, FileText, Truck, MapPin, Building2, Plus } from 'lucide-react';
 import { Card } from '../ui/card';
 import { Input } from '../ui/input';
@@ -15,13 +15,87 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-
-const mockSuppliers: any[] = [];
+import { supabase } from '../../lib/supabase';
+import { toast } from 'sonner';
 
 export function SupplierDirectory() {
   const [searchTerm, setSearchTerm] = useState('');
+  const [suppliers, setSuppliers] = useState<any[]>([]);
   const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
+  const [isAddOpen, setIsAddOpen] = useState(false);
+  const [newSupplierName, setNewSupplierName] = useState('');
+  const [newSupplierContact, setNewSupplierContact] = useState('');
+
+  const handleAddSupplier = async () => {
+    if (!newSupplierName) {
+      toast.error("Supplier name is required");
+      return;
+    }
+    try {
+      const { data: businessData, error: businessError } = await supabase
+        .from('business_users')
+        .select('business_id')
+        .limit(1)
+        .single();
+
+      if (businessError || !businessData) {
+        toast.error("You are not part of any business.");
+        return;
+      }
+
+      const { data, error } = await supabase.from('suppliers').insert({
+        business_id: businessData.business_id,
+        name: newSupplierName,
+        contact_name: newSupplierContact,
+      }).select().single();
+
+      if (error) throw error;
+      
+      toast.success("Supplier added successfully");
+      setIsAddOpen(false);
+      setNewSupplierName('');
+      setNewSupplierContact('');
+      setSuppliers(prev => [data, ...prev]);
+    } catch (err: any) {
+      toast.error(`Error adding supplier: ${err.message}`);
+    }
+  };
+
+  const fetchSuppliers = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('name');
+      
+      if (error) throw error;
+      setSuppliers(data || []);
+    } catch (err) {
+      console.error(err);
+      toast.error("Failed to load suppliers");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchSuppliers();
+    
+    const channel = supabase
+      .channel('public:suppliers')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, () => {
+        fetchSuppliers();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
 
   const openProfile = (sup: any) => {
     setSelectedSupplier(sup);
@@ -42,9 +116,29 @@ export function SupplierDirectory() {
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
           <Button variant="outline" className="bg-white shadow-sm"><Filter className="mr-2 h-4 w-4" /> Filters</Button>
-          <Button><Plus className="mr-2 h-4 w-4" /> Add Supplier</Button>
+          <Button onClick={() => setIsAddOpen(true)}><Plus className="mr-2 h-4 w-4" /> Add Supplier</Button>
         </div>
       </div>
+
+      <Sheet open={isAddOpen} onOpenChange={setIsAddOpen}>
+        <SheetContent className="w-full sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle>Add Supplier</SheetTitle>
+            <SheetDescription>Enter the details for the new supplier.</SheetDescription>
+          </SheetHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Company Name</label>
+              <Input value={newSupplierName} onChange={(e) => setNewSupplierName(e.target.value)} placeholder="Acme Logistics" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Contact Person</label>
+              <Input value={newSupplierContact} onChange={(e) => setNewSupplierContact(e.target.value)} placeholder="John Doe" />
+            </div>
+            <Button className="w-full" onClick={handleAddSupplier}>Save Supplier</Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       <Card className="border-zinc-200 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
@@ -61,20 +155,28 @@ export function SupplierDirectory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {mockSuppliers.map((sup) => (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-6 text-zinc-500">Loading suppliers...</TableCell>
+                </TableRow>
+              ) : suppliers.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={7} className="text-center py-6 text-zinc-500">No suppliers found.</TableCell>
+                </TableRow>
+              ) : suppliers.map((sup) => (
                 <TableRow key={sup.id} className="hover:bg-zinc-50/50 cursor-pointer group" onClick={() => openProfile(sup)}>
-                  <TableCell className="font-mono text-xs text-zinc-500">{sup.id}</TableCell>
+                  <TableCell className="font-mono text-xs text-zinc-500">{sup.id.substring(0, 8)}</TableCell>
                   <TableCell>
                     <div className="flex flex-col">
                       <span className="font-semibold text-zinc-900">{sup.name}</span>
-                      <span className="text-xs text-zinc-500 mt-0.5">{sup.contact} • {sup.phone}</span>
+                      <span className="text-xs text-zinc-500 mt-0.5">{sup.contact_name} {sup.phone ? `• ${sup.phone}` : ''}</span>
                     </div>
                   </TableCell>
-                  <TableCell><Badge variant="secondary" className="font-normal text-xs">{sup.category}</Badge></TableCell>
-                  <TableCell className="text-sm">{sup.terms}</TableCell>
+                  <TableCell><Badge variant="secondary" className="font-normal text-xs">{sup.tax_number || 'Standard'}</Badge></TableCell>
+                  <TableCell className="text-sm">{sup.payment_terms || 'Net 30'}</TableCell>
                   <TableCell className="text-right">
                     <span className={`font-mono font-bold ${sup.balance > 0 ? 'text-red-600' : 'text-zinc-900'}`}>
-                      ${sup.balance.toFixed(2)}
+                      ${(sup.balance || 0).toFixed(2)}
                     </span>
                   </TableCell>
                   <TableCell>

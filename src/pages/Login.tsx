@@ -11,6 +11,9 @@ import { toast } from 'sonner';
 
 export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [businessName, setBusinessName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -23,12 +26,37 @@ export default function Login() {
     let authError = null;
 
     if (isSignUp) {
-      const { error } = await supabase.auth.signUp({
+      if (!firstName || !lastName || !businessName) {
+        toast.error("Please fill in your name and business details");
+        setLoading(false);
+        return;
+      }
+      const { data, error } = await supabase.auth.signUp({
         email,
         password,
       });
       authError = error;
-      if (!error) toast.success('Signup successful! You can now log in.');
+      if (!error && data.user) {
+        // Run onboarding script
+        const { error: rpcError } = await supabase.rpc('setup_new_user_business', {
+           new_business_name: businessName,
+           new_first_name: firstName,
+           new_last_name: lastName
+        });
+        
+        if (rpcError) {
+           console.error("Setup Error", rpcError);
+           toast.error("Account created but could not setup business defaults. You may need to run SETUP_RPC.sql in Supabase.");
+        } else {
+           toast.success('Signup successful! Welcome to Tareza ERP.');
+        }
+
+        if (data.session) {
+          navigate('/dashboard');
+        } else {
+          setIsSignUp(false);
+        }
+      }
     } else {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -102,6 +130,45 @@ export default function Login() {
           </CardHeader>
           <form onSubmit={handleAuth}>
             <CardContent className="space-y-5 p-8">
+              {isSignUp && (
+                <>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName" className="text-xs uppercase tracking-wider font-semibold text-zinc-500">First Name</Label>
+                      <Input 
+                        id="firstName" 
+                        placeholder="John" 
+                        value={firstName}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        required={isSignUp}
+                        className="h-11 bg-zinc-50 focus-visible:ring-primary focus-visible:bg-white border-zinc-200"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName" className="text-xs uppercase tracking-wider font-semibold text-zinc-500">Last Name</Label>
+                      <Input 
+                        id="lastName" 
+                        placeholder="Doe" 
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required={isSignUp}
+                        className="h-11 bg-zinc-50 focus-visible:ring-primary focus-visible:bg-white border-zinc-200"
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="businessName" className="text-xs uppercase tracking-wider font-semibold text-zinc-500">Business Name</Label>
+                    <Input 
+                      id="businessName" 
+                      placeholder="Acme Trading Corp" 
+                      value={businessName}
+                      onChange={(e) => setBusinessName(e.target.value)}
+                      required={isSignUp}
+                      className="h-11 bg-zinc-50 focus-visible:ring-primary focus-visible:bg-white border-zinc-200"
+                    />
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
                 <Label htmlFor="email" className="text-xs uppercase tracking-wider font-semibold text-zinc-500">Email Address</Label>
                 <Input 

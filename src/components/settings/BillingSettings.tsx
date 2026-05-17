@@ -1,15 +1,39 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Check, AlertTriangle, CreditCard, ChevronRight, Download, HelpCircle } from 'lucide-react';
 import { Table, TableHead, TableHeader, TableRow, TableCell, TableBody } from '../ui/table';
+import { supabase } from '../../lib/supabase';
 
 export function BillingSettings() {
-  const planStatus: string = 'GRACE_PERIOD';
-  const expiresAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); 
+  const [businessData, setBusinessData] = useState<any>(null);
+  const [subscription, setSubscription] = useState<any>(null);
+  const [userCount, setUserCount] = useState(1);
+  
+  useEffect(() => {
+    async function loadData() {
+      const { data: business } = await supabase.from('businesses').select('*').limit(1).single();
+      if (business) {
+         setBusinessData(business);
+         const { data: sub } = await supabase.from('subscriptions').select('*').eq('business_id', business.id).order('created_at', { ascending: false }).limit(1).single();
+         if (sub) setSubscription(sub);
+
+         const { count } = await supabase.from('business_users').select('id', { count: 'exact', head: true }).eq('business_id', business.id);
+         setUserCount(count || 1);
+      }
+    }
+    loadData();
+  }, []);
+
+  const planStatus = businessData?.subscription_status === 'GRACE_PERIOD' ? 'GRACE_PERIOD' : subscription?.status === 'active' ? 'ACTIVE' : 'TRIAL';
+  const expiresAt = businessData?.subscription_end_date ? new Date(businessData.subscription_end_date) : new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); 
   const gracePeriodEnd = new Date(expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000);
   const daysLeftInGrace = Math.floor((gracePeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const planName = subscription?.plan_name === 'free_trial' ? 'Free Trial' : subscription?.plan_name || 'Free Trial';
+  const maxUsers = businessData?.max_users || 2;
+  const userPercent = Math.min((userCount / maxUsers) * 100, 100);
+
   
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -29,8 +53,8 @@ export function BillingSettings() {
             <div>
               <div className="flex items-center gap-3">
                 <CardTitle className="text-lg">Subscription Overview</CardTitle>
-                <Badge variant={planStatus === 'ACTIVE' ? 'default' : 'destructive'} className={`${planStatus === 'GRACE_PERIOD' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100' : ''} uppercase tracking-wider text-[10px]`}>
-                  {planStatus === 'GRACE_PERIOD' ? 'Payment Overdue' : 'Active'}
+                <Badge variant={planStatus === 'ACTIVE' || planStatus === 'TRIAL' ? 'default' : 'destructive'} className={`${planStatus === 'GRACE_PERIOD' ? 'bg-amber-100 text-amber-800 border-amber-200 hover:bg-amber-100' : ''} uppercase tracking-wider text-[10px]`}>
+                  {planStatus === 'GRACE_PERIOD' ? 'Payment Overdue' : planStatus === 'TRIAL' ? 'Trial' : 'Active'}
                 </Badge>
               </div>
               <CardDescription className={planStatus === 'GRACE_PERIOD' ? "text-amber-700 font-medium mt-1.5 flex items-center" : "mt-1.5"}>
@@ -40,7 +64,7 @@ export function BillingSettings() {
                     Grace period ends in {daysLeftInGrace} days. System will lock automatically.
                   </>
                 ) : (
-                  `Your subscription is active.`
+                  `Your subscription expires on ${expiresAt.toLocaleDateString()}.`
                 )}
               </CardDescription>
             </div>
@@ -54,22 +78,22 @@ export function BillingSettings() {
               <div className="p-6 flex flex-col justify-center">
                  <p className="text-sm font-medium text-zinc-500 mb-1">Current Plan</p>
                  <div className="flex items-end gap-2">
-                   <h4 className="text-2xl font-bold text-zinc-900">Pro Tier</h4>
+                   <h4 className="text-2xl font-bold text-zinc-900 capitalize">{planName}</h4>
                  </div>
               </div>
               <div className="p-6 flex flex-col justify-center">
                  <p className="text-sm font-medium text-zinc-500 mb-1">Seat Usage</p>
                  <div className="flex items-end gap-2">
-                   <h4 className="text-2xl font-bold text-zinc-900">4 <span className="text-lg font-medium text-zinc-400">/ 10</span></h4>
+                   <h4 className="text-2xl font-bold text-zinc-900">{userCount} <span className="text-lg font-medium text-zinc-400">/ {maxUsers}</span></h4>
                  </div>
                  <div className="w-full h-1.5 bg-zinc-100 rounded-full mt-3 overflow-hidden">
-                    <div className="h-full bg-emerald-500 rounded-full" style={{ width: '40%' }} />
+                    <div className={"h-full rounded-full " + (userPercent > 80 ? "bg-red-500" : "bg-emerald-500")} style={{ width: `${userPercent}%` }} />
                  </div>
               </div>
               <div className="p-6 flex flex-col justify-center">
                  <p className="text-sm font-medium text-zinc-500 mb-1">Billing Cycle</p>
                  <div className="flex items-end gap-2">
-                   <h4 className="text-xl font-bold text-zinc-900">$45.00 <span className="text-sm font-medium text-zinc-400">/mo</span></h4>
+                   <h4 className="text-xl font-bold text-zinc-900">{planName === 'Free Trial' ? '$0.00' : '$45.00'} <span className="text-sm font-medium text-zinc-400">/mo</span></h4>
                  </div>
                  <p className="text-xs text-zinc-500 mt-2 font-medium">Billed on the 1st of every month.</p>
               </div>

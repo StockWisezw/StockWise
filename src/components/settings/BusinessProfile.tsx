@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -7,17 +7,78 @@ import { Textarea } from '../ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Camera, Building2, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { supabase } from '../../lib/supabase';
 
 export function BusinessProfile() {
   const [isSaving, setIsSaving] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [businessData, setBusinessData] = useState<any>(null);
+  
+  const [name, setName] = useState('');
+  const [vatNumber, setVatNumber] = useState('');
+  const [regNumber, setRegNumber] = useState('');
+  const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
 
-  const handleSave = () => {
+  useEffect(() => {
+    async function loadBusiness() {
+      try {
+        const { data, error } = await supabase
+          .from('businesses')
+          .select('*')
+          .limit(1)
+          .single();
+          
+        if (error) {
+           console.error("No business found", error);
+        } else if (data) {
+           setBusinessData(data);
+           setName(data.name || '');
+           setVatNumber(data.vat_number || '');
+           setRegNumber(data.registration_number || '');
+           setEmail(data.email || '');
+           setPhone(data.phone || '');
+        }
+      } catch (err) {
+        console.error("Failed to load business profile", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    loadBusiness();
+  }, []);
+
+  const handleSave = async () => {
+    if (!businessData) {
+      toast.error('No business profile found to update');
+      return;
+    }
+    
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    try {
+      const { error } = await supabase
+        .from('businesses')
+        .update({
+          name,
+          tax_number: vatNumber,
+          registration_number: regNumber,
+          contact_email: email,
+          contact_phone: phone
+        })
+        .eq('id', businessData.id);
+
+      if (error) throw error;
       toast.success('Business profile updated successfully');
-    }, 800);
+    } catch (err: any) {
+      toast.error(`Error saving profile: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsSaving(false);
+    }
   };
+
+  if (isLoading) {
+    return <div className="p-8 text-center text-zinc-500">Loading business profile...</div>;
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -68,26 +129,26 @@ export function BusinessProfile() {
             <CardContent className="pt-6 space-y-6">
               <div className="space-y-2">
                 <Label htmlFor="companyName" className="font-semibold text-zinc-900">Company Name</Label>
-                <Input id="companyName" defaultValue="Tareza Retail" className="h-11 bg-zinc-50/50" />
+                <Input id="companyName" value={name} onChange={e => setName(e.target.value)} className="h-11 bg-zinc-50/50" />
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="vatNumber" className="font-semibold text-zinc-900">VAT / TIN Number</Label>
-                  <Input id="vatNumber" placeholder="e.g. 123456789" className="h-11" />
+                  <Input id="vatNumber" value={vatNumber} onChange={e => setVatNumber(e.target.value)} placeholder="e.g. 123456789" className="h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="regNumber" className="font-semibold text-zinc-900">Company Registration</Label>
-                  <Input id="regNumber" placeholder="e.g. 1234/2023" className="h-11" />
+                  <Input id="regNumber" value={regNumber} onChange={e => setRegNumber(e.target.value)} placeholder="e.g. 1234/2023" className="h-11" />
                 </div>
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <Label htmlFor="email" className="font-semibold text-zinc-900">Contact Email</Label>
-                  <Input id="email" type="email" defaultValue="admin@tareza.hq" className="h-11" />
+                  <Input id="email" type="email" value={email} onChange={e => setEmail(e.target.value)} className="h-11" />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="phone" className="font-semibold text-zinc-900">Phone Number</Label>
-                  <Input id="phone" type="tel" defaultValue="+263 77 123 4567" className="h-11" />
+                  <Input id="phone" type="tel" value={phone} onChange={e => setPhone(e.target.value)} className="h-11" />
                 </div>
               </div>
               <div className="space-y-2 pt-2 border-t border-zinc-100">
