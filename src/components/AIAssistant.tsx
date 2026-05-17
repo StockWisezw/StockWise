@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 import { Card } from "./ui/card";
-import { getGeminiClient } from "../services/ai";
+import { supabase } from "../lib/supabase";
 
 interface Message {
   id: string;
@@ -61,22 +61,23 @@ CURRENT CONTEXT:
     setIsLoading(true);
 
     try {
-      const ai = getGeminiClient();
-
       const systemInstruction = `You are Tareza Assistant, an expert business advisor for retail and wholesale businesses in Africa. Keep your answers concise, actionable, and rely heavily on the context provided. Do not use markdown unless formatting lists or bolding key numbers.`;
 
       const fullPrompt = `${systemInstruction}\n\n${getContextString()}\n\nUser Question: ${userMessage.content}`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-flash",
-        contents: fullPrompt,
+      const { data, error } = await supabase.functions.invoke('insights', {
+        body: { query: fullPrompt }
       });
+
+      if (error) {
+        throw error;
+      }
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "ai",
         content:
-          response.text || "I could not generate an insight at this time.",
+          data?.result || "I could not generate an insight at this time.",
         timestamp: new Date(),
       };
 

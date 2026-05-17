@@ -37,8 +37,8 @@ export function SupportSettings() {
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Billing Email</p>
-                  <a href="mailto:tapiwagahadza54@gmail.com" className="text-sm font-bold text-zinc-900 hover:text-primary transition-colors">
-                    tapiwagahadza54@gmail.com
+                  <a href="mailto:admin@tarezaerp.33mail.com" className="text-sm font-bold text-zinc-900 hover:text-primary transition-colors">
+                    admin@tarezaerp.33mail.com
                   </a>
                 </div>
               </div>
@@ -48,7 +48,7 @@ export function SupportSettings() {
               </div>
             </div>
             
-            <Button className="w-full" onClick={() => window.location.href = 'mailto:tapiwagahadza54@gmail.com?subject=Payment Request - Tareza ERP'}>
+            <Button className="w-full" onClick={() => window.location.href = 'mailto:admin@tarezaerp.33mail.com?subject=Payment Request - Tareza ERP'}>
               Email Billing Team
             </Button>
           </CardContent>
@@ -73,20 +73,39 @@ export function SupportSettings() {
                 Our support engineers are ready to assist you. Include clear details or screenshots if you're experiencing an issue.
               </p>
               
-              <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-md border border-zinc-100">
-                <div className="bg-indigo-100 p-2 rounded-full">
-                  <MessageSquare className="w-4 h-4 text-indigo-600" />
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-md border border-zinc-100">
+                  <div className="bg-indigo-100 p-2 rounded-full">
+                    <MessageSquare className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Support Email</p>
+                    <a href="mailto:support@tarezaerp.33mail.com" className="text-sm font-bold text-zinc-900 hover:text-indigo-600 transition-colors">
+                      support@tarezaerp.33mail.com
+                    </a>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Support Email</p>
-                  <a href="mailto:tapiwagahadza54@gmail.com" className="text-sm font-bold text-zinc-900 hover:text-indigo-600 transition-colors">
-                    tapiwagahadza54@gmail.com
-                  </a>
+
+                <div className="flex items-center gap-3 p-3 bg-zinc-50 rounded-md border border-zinc-100">
+                  <div className="bg-indigo-100 p-2 rounded-full">
+                    <Phone className="w-4 h-4 text-indigo-600" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-zinc-500 uppercase tracking-wide">Phone Support</p>
+                    <div className="flex flex-col">
+                      <a href="tel:+263784553570" className="text-sm font-bold text-zinc-900 hover:text-indigo-600 transition-colors">
+                        +263 784553570
+                      </a>
+                      <a href="tel:+263776699950" className="text-sm font-bold text-zinc-900 hover:text-indigo-600 transition-colors">
+                        +263 776699950
+                      </a>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
             
-            <Button variant="outline" className="w-full border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700" onClick={() => window.location.href = 'mailto:tapiwagahadza54@gmail.com?subject=Technical Support - Tareza ERP'}>
+            <Button variant="outline" className="w-full border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700" onClick={() => window.location.href = 'mailto:support@tarezaerp.33mail.com?subject=Technical Support - Tareza ERP'}>
               Open Support Ticket
             </Button>
           </CardContent>

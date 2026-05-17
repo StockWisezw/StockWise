@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { Store, TrendingUp, ShieldCheck, Zap, Package, Key, Building2, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Store, TrendingUp, ShieldCheck, Zap, Package, Key, Building2, ArrowRight, CheckCircle2, Calculator, Users, BarChart3, Receipt, ShoppingCart, Activity } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 
 export default function Landing() {
@@ -37,20 +37,32 @@ export default function Landing() {
 
       {/* Hero Section */}
       <section className="relative w-full overflow-hidden bg-background">
-        {/* Full-width Video Background */}
-        <div className="absolute inset-0 z-0 pointer-events-none">
-          <video 
-            autoPlay 
-            loop 
-            muted 
-            playsInline 
-            className="w-full h-full object-cover opacity-40 dark:opacity-30"
-          >
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-business-dashboard-in-a-computer-screen-41764-large.mp4" type="video/mp4" />
-          </video>
+        {/* Full-width Module Icons Background */}
+        <div className="absolute inset-0 z-0 pointer-events-none overflow-hidden bg-background">
+          {/* Subtle Grid Pattern */}
+          <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808012_1px,transparent_1px),linear-gradient(to_bottom,#80808012_1px,transparent_1px)] bg-[size:40px_40px] dark:bg-[linear-gradient(to_right,#ffffff12_1px,transparent_1px),linear-gradient(to_bottom,#ffffff12_1px,transparent_1px)]"></div>
+          
+          {/* Floating Application Module Highlights */}
+          <div className="absolute inset-0 opacity-10 dark:opacity-20 animate-fade-in">
+             {/* POS */}
+             <div className="absolute top-[10%] left-[5%]"><Store className="w-16 h-16 text-primary" /></div>
+             {/* Inventory */}
+             <div className="absolute top-[20%] right-[15%]"><Package className="w-20 h-20 text-indigo-500" /></div>
+             {/* AI/Analytics */}
+             <div className="absolute bottom-[20%] left-[15%]"><Activity className="w-24 h-24 text-emerald-500" /></div>
+             {/* Security/Access */}
+             <div className="absolute bottom-[30%] right-[5%]"><ShieldCheck className="w-16 h-16 text-amber-500" /></div>
+             {/* Accounting */}
+             <div className="absolute top-[40%] left-[30%]"><Building2 className="w-12 h-12 text-rose-500" /></div>
+             {/* Billing/Sales */}
+             <div className="absolute top-[60%] right-[30%]"><Receipt className="w-14 h-14 text-blue-500" /></div>
+             {/* HR/Employees */}
+             <div className="absolute top-[80%] left-[50%]"><Users className="w-16 h-16 text-purple-500" /></div>
+          </div>
+
           {/* Overlays to ensure text contrast and add depth */}
-          <div className="absolute inset-0 bg-gradient-to-r from-background via-background/95 to-background/40 dark:from-background dark:via-background/95 dark:to-background/60"></div>
-          <div className="absolute inset-0 backdrop-blur-[4px] dark:backdrop-blur-[8px]"></div>
+          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/80 to-transparent"></div>
+          <div className="absolute inset-0 bg-gradient-to-r from-background via-transparent to-transparent"></div>
         </div>
 
         <div className="w-full max-w-7xl mx-auto px-6 py-24 md:py-32 flex flex-col lg:flex-row items-center relative z-10">
@@ -235,7 +247,7 @@ export default function Landing() {
                 <li className="flex items-center gap-3 text-sm"><CheckCircle2 className="w-5 h-5 text-primary shrink-0" /> Custom API Access</li>
                 <li className="flex items-center gap-3 text-sm"><CheckCircle2 className="w-5 h-5 text-primary shrink-0" /> 24/7 Priority Support</li>
               </ul>
-              <a href="mailto:tapiwagahadza54@gmail.com?subject=Enterprise Inquiry - Tareza ERP" className="mt-auto block">
+              <a href="mailto:admin@tarezaerp.33mail.com?subject=Enterprise Inquiry - Tareza ERP" className="mt-auto block">
                 <Button variant="outline" className="w-full">Contact Sales</Button>
               </a>
             </div>
@@ -246,9 +258,9 @@ export default function Landing() {
                <h4 className="font-bold text-lg text-zinc-900 dark:text-zinc-50 mb-1">Payment & Subscription Enquiries</h4>
                <p className="text-sm text-zinc-600 dark:text-zinc-400">For manual payments, plan upgrades, or direct support, please email our billing team.</p>
             </div>
-            <a href="mailto:tapiwagahadza54@gmail.com?subject=Payment Request - Tareza ERP">
+            <a href="mailto:admin@tarezaerp.33mail.com?subject=Payment Request - Tareza ERP">
                <Button className="shrink-0 bg-primary text-primary-foreground font-semibold">
-                  Contact tapiwagahadza54@gmail.com
+                  Contact admin@tarezaerp.33mail.com
                </Button>
             </a>
           </div>
@@ -263,7 +275,12 @@ export default function Landing() {
              <span className="font-bold tracking-widest text-white">TAREZA ERP</span>
            </div>
            <div className="flex flex-col md:flex-row items-center gap-4 text-zinc-400 mb-4 md:mb-0">
-             <a href="mailto:tapiwagahadza54@gmail.com" className="hover:text-primary transition-colors">Support & Payments: tapiwagahadza54@gmail.com</a>
+             <a href="mailto:support@tarezaerp.33mail.com" className="hover:text-primary transition-colors">Support: support@tarezaerp.33mail.com</a>
+             <a href="mailto:admin@tarezaerp.33mail.com" className="hover:text-primary transition-colors">Billing: admin@tarezaerp.33mail.com</a>
+             <div className="flex gap-2">
+               <a href="tel:+263784553570" className="hover:text-primary transition-colors">Phone 1: +263 784553570</a> |
+               <a href="tel:+263776699950" className="hover:text-primary transition-colors">Phone 2: +263 776699950</a>
+             </div>
            </div>
            <p className="text-zinc-400">© 2026 Tareza Technologies. All rights reserved.</p>
         </div>

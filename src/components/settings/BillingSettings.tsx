@@ -18,7 +18,7 @@ export function BillingSettings() {
           <h3 className="text-xl font-bold text-zinc-900 tracking-tight">Billing & Subscription</h3>
           <p className="text-sm text-zinc-500 mt-1">Manage your subscription plan, branches, and user limits.</p>
         </div>
-        <Button variant="outline" className="text-zinc-600" onClick={() => window.location.href = 'mailto:tapiwagahadza54@gmail.com?subject=Billing Support - Tareza ERP'}>
+        <Button variant="outline" className="text-zinc-600" onClick={() => window.location.href = 'mailto:admin@tarezaerp.33mail.com?subject=Billing Support - Tareza ERP'}>
           <HelpCircle className="w-4 h-4 mr-2" /> Billing Support
         </Button>
       </div>

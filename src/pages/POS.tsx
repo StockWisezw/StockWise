@@ -189,9 +189,9 @@ export default function POS() {
   });
 
   return (
-    <div className="flex flex-col lg:flex-row h-[calc(100vh-8rem)] gap-4 pb-2">
+    <div className="flex flex-col lg:flex-row h-auto lg:h-[calc(100vh-8rem)] gap-4 pb-2">
       
-      {/* LEFT COLUMN: Search & Cart */}
+      {/* LEFT COLUMN: Products & Search */}
       <div className="flex-1 flex flex-col bg-white rounded-xl shadow-sm border border-zinc-200 overflow-hidden">
         
         {/* Top Search Bar Area */}
@@ -393,7 +393,7 @@ export default function POS() {
         </Card>
 
         {/* Cart items list */}
-        <Card className="border-zinc-200 shadow-sm shrink-0 max-h-[40vh] flex flex-col pt-4">
+        <Card className="border-zinc-200 shadow-sm flex-1 min-h-[200px] flex flex-col pt-4">
           {cart.length === 0 ? (
             <div className="flex-1 flex flex-col items-center justify-center text-zinc-400 p-8">
               <ShoppingCart className="h-10 w-10 text-zinc-300 mb-2" />
@@ -434,7 +434,7 @@ export default function POS() {
         </Card>
 
         {/* Totals Panel */}
-        <Card className="flex-1 flex flex-col border-zinc-200 shadow-sm overflow-hidden">
+        <Card className="shrink-0 flex flex-col border-zinc-200 shadow-sm overflow-hidden">
           <CardContent className="p-0 flex flex-col h-full">
             <div className="flex-1 p-5 space-y-4 bg-white">
               <div className="flex justify-between text-zinc-600 items-baseline">
