@@ -5,6 +5,7 @@ import { Badge } from '../ui/badge';
 import { Check, AlertTriangle, CreditCard, ChevronRight, Download, HelpCircle } from 'lucide-react';
 import { Table, TableHead, TableHeader, TableRow, TableCell, TableBody } from '../ui/table';
 import { supabase } from '../../lib/supabase';
+import { toast } from 'sonner';
 
 export function BillingSettings() {
   const [businessData, setBusinessData] = useState<any>(null);

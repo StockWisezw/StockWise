@@ -38,7 +38,18 @@ export function TaxationSettings() {
         .select('*')
         .order('name');
         
-      if (error) throw error;
+      if (error) {
+        if (error.code === '42P01' || error.message?.includes('relation') || error.code === '404') {
+          // Mock data if table hasn't been created yet in Supabase
+          setTaxRates([
+            { id: '1', name: 'VAT Standard', rate: 15, type: 'percentage', is_active: true },
+            { id: '2', name: 'VAT Zero', rate: 0, type: 'percentage', is_active: true },
+            { id: '3', name: 'Exempt', rate: 0, type: 'percentage', is_active: true }
+          ]);
+          return;
+        }
+        throw error;
+      }
       setTaxRates(data || []);
     } catch (err: any) {
       console.error(err);

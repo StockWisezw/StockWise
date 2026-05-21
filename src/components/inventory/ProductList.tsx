@@ -40,11 +40,7 @@ export function ProductList() {
       setLoading(true);
       const { data, error } = await supabase
         .from('products')
-        .select(`
-          id, sku, barcode, name, retail_price, wholesale_price, tax_class, is_active,
-          categories(name),
-          inventory(quantity)
-        `)
+        .select('*')
         .eq('is_active', true)
         .order('name');
       
