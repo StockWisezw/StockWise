@@ -24,7 +24,6 @@
     "cmdk": "^1.1.1",
     "cors": "^2.8.6",
     "date-fns": "^4.1.0",
-    "domexception": "^4.0.0",
     "dotenv": "^17.2.3",
     "express": "^4.22.2",
     "firebase": "^12.13.0",
