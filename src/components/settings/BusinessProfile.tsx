@@ -51,7 +51,7 @@ export function BusinessProfile() {
           setBusinessData(data);
           setName(data.name || "");
           setVatNumber(data.vat_number || "");
-          setRegNumber(data.registration_number || "");
+          setRegNumber(data.company_registration_number || "");
           setEmail(data.email || "");
           setPhone(data.phone || "");
         }
@@ -74,7 +74,7 @@ export function BusinessProfile() {
           .insert({
             name: name || "My Business",
             tax_number: vatNumber,
-            registration_number: regNumber,
+            company_registration_number: regNumber,
             email: email,
             phone: phone,
           })
@@ -91,7 +91,7 @@ export function BusinessProfile() {
           .update({
             name,
             tax_number: vatNumber,
-            registration_number: regNumber,
+            company_registration_number: regNumber,
             email: email,
             phone: phone,
           })

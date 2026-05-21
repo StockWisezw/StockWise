@@ -14,6 +14,8 @@ export default function Login() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [businessName, setBusinessName] = useState('');
+  const [registrationNumber, setRegistrationNumber] = useState('');
+  const [planChoice, setPlanChoice] = useState('TRIAL');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -47,8 +49,22 @@ export default function Login() {
           { id: user.id, first_name: firstName, last_name: lastName, email: user.email }
         ]);
 
+        const endDate = new Date();
+        if (planChoice === 'TRIAL') {
+           endDate.setDate(endDate.getDate() + 14); // 14-day free trial
+        } else {
+           endDate.setDate(endDate.getDate() + 30); // 30-day Pro plan
+        }
+
         const { data: bData } = await supabase.from('businesses').insert([
-          { name: businessName, created_at: new Date().toISOString() }
+          { 
+            name: businessName, 
+            company_registration_number: registrationNumber,
+            subscription_plan: planChoice === 'TRIAL' ? 'TRIAL' : 'PRO',
+            subscription_status: planChoice === 'TRIAL' ? 'TRIAL' : 'ACTIVE',
+            subscription_end_date: endDate.toISOString(),
+            created_at: new Date().toISOString() 
+          }
         ]).select().single();
 
         const bRef = bData as any;
@@ -198,16 +214,47 @@ export default function Login() {
                       />
                     </div>
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="businessName" className="text-xs uppercase tracking-wider font-semibold text-zinc-500">Business Name</Label>
-                    <Input 
-                      id="businessName" 
-                      placeholder="Acme Trading Corp" 
-                      value={businessName}
-                      onChange={(e) => setBusinessName(e.target.value)}
-                      required={isSignUp}
-                      className="h-11 bg-zinc-50 focus-visible:ring-primary focus-visible:bg-white border-zinc-200"
-                    />
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="businessName" className="text-xs uppercase tracking-wider font-semibold text-zinc-500">Business Name</Label>
+                      <Input 
+                        id="businessName" 
+                        placeholder="Acme Trading Corp" 
+                        value={businessName}
+                        onChange={(e) => setBusinessName(e.target.value)}
+                        required={isSignUp}
+                        className="h-11 bg-zinc-50 focus-visible:ring-primary focus-visible:bg-white border-zinc-200"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="registrationNumber" className="text-xs uppercase tracking-wider font-semibold text-zinc-500">Registration Number</Label>
+                      <Input 
+                        id="registrationNumber" 
+                        placeholder="e.g. 12345/2026" 
+                        value={registrationNumber}
+                        onChange={(e) => setRegistrationNumber(e.target.value)}
+                        className="h-11 bg-zinc-50 focus-visible:ring-primary focus-visible:bg-white border-zinc-200"
+                      />
+                    </div>
+                    <div className="space-y-2 pb-2">
+                      <Label className="text-xs uppercase tracking-wider font-semibold text-zinc-500 mb-2 block">Choose Plan</Label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div 
+                           className={`border rounded-lg p-3 cursor-pointer transition-all ${planChoice === 'TRIAL' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border bg-white hover:bg-zinc-50'}`}
+                           onClick={() => setPlanChoice('TRIAL')}
+                        >
+                           <p className="font-bold text-zinc-900 text-sm">14-Day Free Trial</p>
+                           <p className="text-xs text-zinc-500">Explore all features</p>
+                        </div>
+                        <div 
+                           className={`border rounded-lg p-3 cursor-pointer transition-all ${planChoice === 'PRO' ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-border bg-white hover:bg-zinc-50'}`}
+                           onClick={() => setPlanChoice('PRO')}
+                        >
+                           <p className="font-bold text-zinc-900 text-sm">Pro ($40/mo)</p>
+                           <p className="text-xs text-zinc-500">Start with real product</p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </>
               )}
