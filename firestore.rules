@@ -91,6 +91,10 @@ service cloud.firestore {
     match /sales/{id} {
       allow read, write: if isSignedIn();
     }
+    match /cash_drawer_logs/{id} { 
+      allow read, write: if isSignedIn(); 
+    }
+    match /expense_categories/{id} { allow read, write: if isSignedIn(); }
     match /tax_rates/{id} { allow read, write: if isSignedIn(); }
     match /inventory_transfers/{id} { allow read, write: if isSignedIn(); }
     match /stock_movements/{id} { allow read, write: if isSignedIn(); }

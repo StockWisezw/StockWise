@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
@@ -10,12 +10,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useReactToPrint } from 'react-to-print';
 import { ReceiptPrint } from '../components/pos/ReceiptPrint';
 import { toast } from 'sonner';
+import { db } from '../lib/firebase';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 export default function ReceiptHistory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<SaleRecord | null>(null);
-  const { offlineQueue } = usePOSStore(); // Mocking recent sales via offlineQueue for demo
+  const [salesHistory, setSalesHistory] = useState<SaleRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const receiptRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    fetchSales();
+  }, []);
+
+  const fetchSales = async () => {
+    setIsLoading(true);
+    try {
+      const q = query(collection(db, 'sales'), orderBy('created_at', 'desc'), limit(50));
+      const snapshot = await getDocs(q);
+      const sales: any[] = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setSalesHistory(sales);
+    } catch (err) {
+      console.error('Failed to load past transactions:', err);
+      toast.error('Could not load history');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const setSaleAndPrint = (sale: SaleRecord) => {
     setSelectedSale(sale);
@@ -29,17 +54,17 @@ export default function ReceiptHistory() {
   });
 
   const exportCSV = () => {
-    if (offlineQueue.length === 0) {
+    if (salesHistory.length === 0) {
       alert('No receipts to export');
       return;
     }
     
     const headers = ['Receipt #', 'Date', 'Total Amount', 'Items', 'Status'];
-    const rows = offlineQueue.map(s => [
+    const rows = salesHistory.map(s => [
       s.receiptNumber,
-      new Date(s.timestamp).toLocaleString(),
+      s.created_at ? new Date(s.created_at).toLocaleString() : new Date(s.timestamp).toLocaleString(),
       s.total.toFixed(2),
-      s.items.map(i => `${i.product.name} (x${i.quantity})`).join('; '),
+      s.items ? s.items.map(i => `${i.product.name} (x${i.quantity})`).join('; ') : '',
       s.status
     ]);
     
@@ -99,18 +124,26 @@ export default function ReceiptHistory() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {offlineQueue.length === 0 ? (
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10 text-zinc-500">
+                    Loading...
+                  </TableCell>
+                </TableRow>
+              ) : salesHistory.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-10 text-zinc-500">
                     No past transactions found. Complete a sale to see it here.
                   </TableCell>
                 </TableRow>
               ) : (
-                offlineQueue.map(sale => (
+                salesHistory
+                  .filter(s => s.receiptNumber.includes(searchTerm))
+                  .map(sale => (
                   <TableRow key={sale.id} className="hover:bg-zinc-50 transition-colors cursor-pointer group">
-                    <TableCell className="font-mono text-sm">{new Date(sale.timestamp).toLocaleString()}</TableCell>
+                    <TableCell className="font-mono text-sm">{sale.created_at ? new Date(sale.created_at).toLocaleString() : new Date(sale.timestamp).toLocaleString()}</TableCell>
                     <TableCell className="font-mono text-primary font-medium">{sale.receiptNumber}</TableCell>
-                    <TableCell>{sale.items.length} items</TableCell>
+                    <TableCell>{sale.items ? sale.items.length : 0} items</TableCell>
                     <TableCell>
                       <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Completed</Badge>
                     </TableCell>
@@ -129,9 +162,9 @@ export default function ReceiptHistory() {
                           <div className="py-6 px-10 border rounded-lg bg-zinc-50 font-mono text-sm text-center">
                             <h3 className="font-bold text-lg">TAREZA RETAIL</h3>
                             <p>Receipt: {sale.receiptNumber}</p>
-                            <p>{new Date(sale.timestamp).toLocaleString()}</p>
+                            <p>{sale.created_at ? new Date(sale.created_at).toLocaleString() : new Date(sale.timestamp).toLocaleString()}</p>
                             <div className="my-4 border-t border-dashed border-zinc-400"></div>
-                            {sale.items.map(item => (
+                            {sale.items && sale.items.map(item => (
                               <div key={item.id} className="flex justify-between py-1">
                                 <span>{item.quantity}x {item.product.name}</span>
                                 <span>${item.subtotal.toFixed(2)}</span>

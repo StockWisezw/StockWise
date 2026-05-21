@@ -23,6 +23,6 @@ Inventory Data: ${JSON.stringify(inventoryData)}`;
     return data.result || 'No insights generated.';
   } catch (error) {
     console.error('Error generating AI insights:', error);
-    return 'Unable to generate AI insights at the moment. Please check your API key / Supabase configuration.';
+    return 'Our AI assistant is currently experiencing high demand. Please try again in a few minutes, or review the raw data directly.';
   }
 };

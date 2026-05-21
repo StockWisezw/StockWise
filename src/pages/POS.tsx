@@ -15,7 +15,6 @@ import { useNavigate } from 'react-router-dom';
 import { usePOSStore, Product, SaleRecord, Customer } from '../store/posStore';
 import { PaymentDialog } from '../components/pos/PaymentDialog';
 import { ReceiptPrint } from '../components/pos/ReceiptPrint';
-import { supabase } from '../lib/supabase';
 
 export default function POS() {
   const navigate = useNavigate();
@@ -49,60 +48,73 @@ export default function POS() {
   const receiptRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch products and customers from Supabase
+  // Fetch products and customers from Firebase
   useEffect(() => {
+    let unsubscribeProducts: () => void;
+    
     const loadData = async () => {
       try {
         setIsLoading(true);
-        // Using mock data as fallback if no real data exists or API errors out, 
-        // given this is a preview environment heavily reliant on Supabase correctly migrating.
-        let productsData: any[] | null = null;
-        let customersData: any[] | null = null;
+        const { collection, getDocs, onSnapshot, query, where } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+        
+        let productsData: any[] = [];
+        let customersData: any[] = [];
+        let catData: any[] = [];
         
         try {
-          const [{ data: pData }, { data: cData }, { data: catData }] = await Promise.all([
-            supabase.from('products').select('id, name, barcode, sku, retail_price, wholesale_price, tax_class, category_id, categories(name)').eq('is_active', true),
-            supabase.from('customers').select('id, name, phone, email, address, balance, credit_limit'),
-            supabase.from('categories').select('id, name')
-          ]);
-          productsData = pData;
-          customersData = cData;
+          const productsRef = collection(db, 'products');
+          // Assuming we just fetch all products for now
           
-          if (catData) {
+          const customersRef = collection(db, 'customers');
+          const [custSnap, catSnap] = await Promise.all([
+            getDocs(customersRef),
+            getDocs(collection(db, 'categories'))
+          ]);
+          
+          customersData = custSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          catData = catSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          
+          if (catData.length > 0) {
             setCategories([
               { id: 'all', name: 'All Menu', icon: <Package className="w-5 h-5" /> },
               ...catData.map(c => ({ id: c.id, name: c.name, icon: <Tag className="w-5 h-5" /> }))
             ]);
           }
+          
+          // Setup realtime subscription for products
+          unsubscribeProducts = onSnapshot(productsRef, (snapshot) => {
+            const pData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            if (pData.length > 0) {
+              setProducts(pData.map(p => ({
+                id: p.id,
+                name: p.name || 'Unnamed',
+                barcode: p.barcode || '',
+                sku: p.sku || '',
+                retailPrice: p.retail_price || p.retailPrice || 0,
+                wholesalePrice: p.wholesale_price || p.wholesalePrice || 0,
+                taxClass: p.tax_class || p.taxClass || 'standard',
+                category: p.category_id || p.category || 'all',
+                imageUrl: '', 
+              })));
+            } else {
+              setProducts([]);
+            }
+          });
+          
         } catch (e) {
-          console.error("Supabase fetch failed", e);
+          console.error("Firebase fetch failed", e);
         }
 
-        if (productsData && productsData.length > 0) {
-          setProducts(productsData.map(p => ({
-            id: p.id,
-            name: p.name,
-            barcode: p.barcode || '',
-            sku: p.sku || '',
-            retailPrice: p.retail_price,
-            wholesalePrice: p.wholesale_price,
-            taxClass: p.tax_class as any,
-            category: p.category_id || 'all',
-            imageUrl: '', 
-          })));
-        } else {
-          setProducts([]);
-        }
-
-        if (customersData && customersData.length > 0) {
+        if (customersData.length > 0) {
           setCustomers(customersData.map(c => ({
             id: c.id,
-            name: c.name,
+            name: c.name || 'Unnamed',
             phone: c.phone || '',
             email: c.email || '',
             address: c.address || '',
             balance: c.balance || 0,
-            creditLimit: c.credit_limit || 0
+            creditLimit: c.credit_limit || c.creditLimit || 0
           })));
         } else {
           setCustomers([]);
@@ -116,16 +128,8 @@ export default function POS() {
 
     loadData();
     
-    // Subscribe to realtime product changes in POS
-    const channel = supabase
-      .channel('pos_products')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
-        loadData(); // Re-fetch products when a change occurs
-      })
-      .subscribe();
-
     return () => {
-      supabase.removeChannel(channel);
+      if (unsubscribeProducts) unsubscribeProducts();
     };
   }, []);
 
@@ -176,16 +180,44 @@ export default function POS() {
       shouldPrintRef.current = true;
       
       try {
+        const { collection, addDoc, doc, getDoc, updateDoc } = await import('firebase/firestore');
+        const { db } = await import('../lib/firebase');
+
+        // 1. Save Sale to Firebase
+        const saleData = JSON.parse(JSON.stringify(sale));
+        const saleDoc = await addDoc(collection(db, 'sales'), {
+          ...saleData,
+          total: sale.total,
+          payment_method: sale.payments.length > 0 ? sale.payments[0].method : 'cash',
+          status: 'completed',
+          created_at: new Date().toISOString()
+        });
+
+        // 2. Update Credit Balance if needed
         const creditPayment = sale.payments.find(p => p.method === 'credit');
         if (creditPayment && sale.customerId) {
-          const { data: custData } = await supabase.from('customers').select('balance').eq('id', sale.customerId).single();
-          if (custData) {
+          const customerRef = doc(db, 'customers', sale.customerId);
+          const custSnap = await getDoc(customerRef);
+          if (custSnap.exists()) {
+            const custData = custSnap.data();
             const newBalance = Number(custData.balance || 0) + creditPayment.amount;
-            await supabase.from('customers').update({ balance: newBalance }).eq('id', sale.customerId);
+            await updateDoc(customerRef, { balance: newBalance });
           }
         }
+
+        // 3. Update Cash Drawer
+        const cashPayment = sale.payments.find(p => p.method === 'cash');
+        if (cashPayment) {
+          await addDoc(collection(db, 'cash_drawer_logs'), {
+            amount: cashPayment.amount, // Record the exact cash amount processed
+            transaction_type: 'cash_sale',
+            notes: `Sale ${sale.receiptNumber}`,
+            sale_id: saleDoc.id,
+            created_at: new Date().toISOString()
+          });
+        }
       } catch (err) {
-        console.error('Failed to update credit balance', err);
+        console.error('Failed to sync sale to Firebase / update credit balance', err);
       }
     } else {
       toast.error('Could not complete sale. Check balance.');
@@ -237,7 +269,11 @@ export default function POS() {
                     </DialogHeader>
                     <div className="space-y-2 max-h-[60vh] overflow-y-auto">
                       {parkedSales.map(sale => (
-                        <Card key={sale.id} className="cursor-pointer hover:bg-zinc-50" onClick={() => resumeSale(sale.id)}>
+                        <Card key={sale.id} className="cursor-pointer hover:bg-zinc-50" onClick={() => {
+                          resumeSale(sale.id);
+                          // A bit hacky but works for un-controlled Radix Dialog, blur or click outside
+                          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+                        }}>
                           <CardContent className="p-4 flex justify-between items-center">
                             <div>
                               <p className="font-semibold">{sale.receiptNumber}</p>

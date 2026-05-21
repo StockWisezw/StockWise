@@ -5,7 +5,8 @@ import { Plus, Store, Warehouse, MapPin, MoreHorizontal, LayoutGrid, Loader2 } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
-import { supabase } from '../../lib/supabase';
+import { auth, db } from '../../lib/firebase';
+import { collection, query, where, getDocs, addDoc, orderBy } from 'firebase/firestore';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -21,20 +22,32 @@ export function BranchWarehouseSettings() {
   const [newBranchType, setNewBranchType] = useState('branch');
   const [newBranchAddress, setNewBranchAddress] = useState('');
 
+  const fetchBranches = async (bizId: string) => {
+    const q = query(
+      collection(db, 'branches'),
+      where('business_id', '==', bizId)
+    );
+    const snap = await getDocs(q);
+    const branches = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+      // manually sort if orderby not indexed
+      .sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+    setLocations(branches);
+  };
+
   useEffect(() => {
     async function loadBranches() {
       try {
-        const { data: userData } = await supabase.auth.getUser();
-        if (!userData.user) return;
+        const user = auth.currentUser;
+        if (!user) return;
 
-        const { data: buData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).single();
-        if (!buData) return;
-        setBusinessId(buData.business_id);
+        const buQuery = query(collection(db, 'business_users'), where('user_id', '==', user.uid));
+        const buSnap = await getDocs(buQuery);
+        
+        if (buSnap.empty) return;
+        const bizId = buSnap.docs[0].data().business_id;
+        setBusinessId(bizId);
 
-        const { data: bData } = await supabase.from('branches').select('*').eq('business_id', buData.business_id).order('created_at', { ascending: true });
-        if (bData) {
-            setLocations(bData);
-        }
+        await fetchBranches(bizId);
       } catch (err) {
         console.error(err);
       } finally {
@@ -53,19 +66,18 @@ export function BranchWarehouseSettings() {
     }
     setIsAdding(true);
     try {
-        const { data, error } = await supabase.from('branches').insert({
+        await addDoc(collection(db, 'branches'), {
             business_id: businessId,
             name: newBranchName,
             type: newBranchType,
             address: newBranchAddress,
-            is_active: true
+            is_active: true,
+            created_at: new Date().toISOString()
         });
-        if (error) throw error;
         toast.success("Branch created successfully");
         
         // Reload
-        const { data: bData } = await supabase.from('branches').select('*').eq('business_id', businessId).order('created_at', { ascending: true });
-        if (bData) setLocations(bData);
+        await fetchBranches(businessId);
         
         // Reset form
         setNewBranchName('');

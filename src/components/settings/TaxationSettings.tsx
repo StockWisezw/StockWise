@@ -3,20 +3,29 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '../ui/button';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
+import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
-import { Plus, Calculator, Edit2, Percent } from 'lucide-react';
+import { Plus, Calculator, Edit2, Percent, ListPlus, Receipt, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { supabase } from '@/lib/supabase';
+import { db, auth } from '@/lib/firebase';
+import { collection, query, where, getDocs, addDoc, deleteDoc, doc, orderBy } from 'firebase/firestore';
 
 export function TaxationSettings() {
   const [isAdding, setIsAdding] = useState(false);
   const [taxRates, setTaxRates] = useState<any[]>([]);
+  const [expenseCategories, setExpenseCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [expensesLoading, setExpensesLoading] = useState(true);
   const [vatEnabled, setVatEnabled] = useState(false);
+  const [newExpenseName, setNewExpenseName] = useState('');
+  const [newExpenseDesc, setNewExpenseDesc] = useState('');
+  const [isAddingExpense, setIsAddingExpense] = useState(false);
 
   useEffect(() => {
     fetchTaxRates();
+    fetchExpenseCategories();
     const storedVat = localStorage.getItem('tareza_vat_enabled');
     if (storedVat !== null) {
       setVatEnabled(storedVat === 'true');
@@ -38,6 +47,71 @@ export function TaxationSettings() {
       toast.error('Failed to load tax rates');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchExpenseCategories = async () => {
+    try {
+      setExpensesLoading(true);
+      const q = query(collection(db, 'expense_categories'), orderBy('name', 'asc'));
+      const snap = await getDocs(q);
+      let categories = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      if (categories.length === 0) {
+        // Seed initial categories
+        const defaults = [
+          { name: 'Utilities', description: 'Electricity, water, internet, etc.' },
+          { name: 'Salaries', description: 'Employee payroll and wages' },
+          { name: 'Rent', description: 'Property and equipment rent' },
+          { name: 'Marketing', description: 'Advertising and promotions' },
+          { name: 'Office Supplies', description: 'Stationery, consumables' },
+        ];
+        
+        await Promise.all(defaults.map(cat => addDoc(collection(db, 'expense_categories'), {
+            ...cat,
+            created_at: new Date().toISOString()
+        })));
+        
+        const q2 = query(collection(db, 'expense_categories'), orderBy('name', 'asc'));
+        const snap2 = await getDocs(q2);
+        categories = snap2.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      }
+      setExpenseCategories(categories);
+    } catch (err: any) {
+      console.error('Failed to load expense categories', err);
+    } finally {
+      setExpensesLoading(false);
+    }
+  };
+
+  const handleAddExpenseCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newExpenseName.trim()) return;
+    try {
+      setIsAddingExpense(true);
+      await addDoc(collection(db, 'expense_categories'), {
+        name: newExpenseName,
+        description: newExpenseDesc,
+        created_at: new Date().toISOString()
+      });
+      toast.success('Expense category added');
+      setNewExpenseName('');
+      setNewExpenseDesc('');
+      fetchExpenseCategories();
+    } catch (err: any) {
+      toast.error('Failed to add expense category');
+    } finally {
+      setIsAddingExpense(false);
+    }
+  };
+
+  const handleDeleteExpense = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'expense_categories', id));
+      toast.success('Category removed');
+      fetchExpenseCategories();
+    } catch (err) {
+      toast.error('Failed to remove category');
     }
   };
 
@@ -164,6 +238,96 @@ export function TaxationSettings() {
                       <TableCell className="text-right">
                          <Button variant="outline" size="sm" className="h-8 border-zinc-200 text-zinc-700 hover:bg-zinc-100">
                             <Edit2 className="w-3 h-3 mr-1.5" /> Edit
+                         </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </Card>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="md:col-span-1">
+          <Card className="border-zinc-200/60 shadow-sm h-full">
+            <CardHeader className="pb-4 border-b border-zinc-100">
+              <div className="flex items-center gap-2">
+                <ListPlus className="w-5 h-5 text-zinc-400" />
+                <CardTitle className="text-lg">Add Category</CardTitle>
+              </div>
+              <CardDescription className="mt-1">Add a new predefined expense category.</CardDescription>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <form onSubmit={handleAddExpenseCategory} className="space-y-4">
+                <div className="space-y-2">
+                  <Label>Category Name</Label>
+                  <Input 
+                    placeholder="e.g. Server Hosting" 
+                    value={newExpenseName} 
+                    onChange={e => setNewExpenseName(e.target.value)} 
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Description</Label>
+                  <Input 
+                    placeholder="Brief definition..." 
+                    value={newExpenseDesc} 
+                    onChange={e => setNewExpenseDesc(e.target.value)} 
+                  />
+                </div>
+                <Button type="submit" disabled={isAddingExpense || !newExpenseName.trim()} className="w-full">
+                  {isAddingExpense ? 'Adding...' : 'Add Category'}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="md:col-span-2">
+          <Card className="border-zinc-200/60 shadow-sm h-full">
+            <CardHeader className="pb-4 border-b border-zinc-100 bg-zinc-50/50">
+              <div className="flex items-center gap-2">
+                <Receipt className="w-5 h-5 text-zinc-400" />
+                <CardTitle className="text-lg">Predefined Expense Categories</CardTitle>
+              </div>
+              <CardDescription className="mt-1">Common business expenses to streamline logging.</CardDescription>
+            </CardHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader className="bg-zinc-50/50">
+                  <TableRow>
+                     <TableHead className="w-[200px]">Name</TableHead>
+                     <TableHead>Description</TableHead>
+                     <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {expensesLoading ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-6 text-zinc-500">
+                         Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : expenseCategories.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} className="text-center py-6 text-zinc-500">
+                         No expense categories found.
+                      </TableCell>
+                    </TableRow>
+                  ) : expenseCategories.map(cat => (
+                    <TableRow key={cat.id} className="group hover:bg-zinc-50/50 transition-colors">
+                      <TableCell className="font-semibold text-zinc-900">
+                         {cat.name}
+                      </TableCell>
+                      <TableCell className="text-zinc-500 text-sm">
+                         {cat.description || '-'}
+                      </TableCell>
+                      <TableCell className="text-right">
+                         <Button onClick={() => handleDeleteExpense(cat.id)} variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-red-600 hover:bg-red-50">
+                            <Trash2 className="w-4 h-4" />
                          </Button>
                       </TableCell>
                     </TableRow>

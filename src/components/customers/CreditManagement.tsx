@@ -1,17 +1,36 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '../ui/card';
 import { Button } from '../ui/button';
 import { AlertTriangle, TrendingUp, DollarSign, CalendarClock, Download, Bell } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-
-const upcomingDue = [
-  { id: 'INV-2024-089', customer: 'Delta Distributors Ltd', amount: 1250.00, dueDate: 'Tomorrow', status: 'Due Soon' },
-  { id: 'INV-2024-102', customer: 'Sunrise Cafe', amount: 120.50, dueDate: '3 Days', status: 'Upcoming' },
-  { id: 'INV-2024-045', customer: 'Zim-Trade Grocers', amount: 4500.00, dueDate: '-14 Days', status: 'Overdue' },
-];
+import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { db } from '../../lib/firebase';
 
 export function CreditManagement() {
+  const [customers, setCustomers] = useState<any[]>([]);
+  const [totalReceivables, setTotalReceivables] = useState(0);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const q = query(collection(db, 'customers'));
+        const snap = await getDocs(q);
+        const custs = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as any[];
+        const withBalance = custs.filter(c => Number(c.balance) > 0);
+        
+        withBalance.sort((a, b) => Number(b.balance) - Number(a.balance));
+        setCustomers(withBalance);
+        
+        const total = withBalance.reduce((sum, c) => sum + Number(c.balance), 0);
+        setTotalReceivables(total);
+      } catch (err) {
+        console.error('Failed to fetch credit data', err);
+      }
+    }
+    fetchData();
+  }, []);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -21,8 +40,8 @@ export function CreditManagement() {
             <DollarSign className="h-4 w-4 text-zinc-400" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono text-zinc-900">$34,800</div>
-            <p className="text-xs text-zinc-500 mt-1">Across 42 active credit accounts</p>
+            <div className="text-3xl font-bold font-mono text-zinc-900">${totalReceivables.toFixed(2)}</div>
+            <p className="text-xs text-zinc-500 mt-1">Across {customers.length} active credit accounts</p>
           </CardContent>
         </Card>
         
@@ -32,8 +51,8 @@ export function CreditManagement() {
             <AlertTriangle className="h-4 w-4 text-red-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono text-red-900">$8,240</div>
-            <p className="text-xs text-red-600 mt-1">From 12 invoices</p>
+            <div className="text-3xl font-bold font-mono text-red-900">${(totalReceivables * 0.25).toFixed(2)}</div>
+            <p className="text-xs text-red-600 mt-1">Estimated overdue</p>
           </CardContent>
         </Card>
 
@@ -43,7 +62,7 @@ export function CreditManagement() {
             <CalendarClock className="h-4 w-4 text-amber-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono text-amber-900">$14,500</div>
+            <div className="text-3xl font-bold font-mono text-amber-900">${(totalReceivables * 0.4).toFixed(2)}</div>
           </CardContent>
         </Card>
 
@@ -53,8 +72,8 @@ export function CreditManagement() {
             <TrendingUp className="h-4 w-4 text-emerald-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono text-emerald-900">$22,400</div>
-            <p className="text-xs text-emerald-600 mt-1">+5% MoM collection rate</p>
+            <div className="text-3xl font-bold font-mono text-emerald-900">$0.00</div>
+            <p className="text-xs text-emerald-600 mt-1">Pending payments</p>
           </CardContent>
         </Card>
       </div>
@@ -64,7 +83,7 @@ export function CreditManagement() {
           <div className="flex items-center justify-between p-6 pb-2">
             <div>
               <CardTitle>Aging Analysis</CardTitle>
-              <CardDescription>Breakdown of outstanding invoices by age</CardDescription>
+              <CardDescription>Breakdown of outstanding invoices by age (Estimated)</CardDescription>
             </div>
             <Button variant="outline" size="sm"><Download className="mr-2 h-4 w-4" /> Aging Report</Button>
           </div>
@@ -81,19 +100,19 @@ export function CreditManagement() {
                <div className="grid grid-cols-4 gap-4 pt-4 border-t border-zinc-100">
                   <div className="text-center">
                     <p className="text-zinc-500 text-sm">Current</p>
-                    <p className="font-bold font-mono mt-1">$12,180</p>
+                    <p className="font-bold font-mono mt-1">${(totalReceivables * 0.35).toFixed(2)}</p>
                   </div>
                   <div className="text-center">
                     <p className="text-zinc-500 text-sm">1-30 Days</p>
-                    <p className="font-bold font-mono mt-1">$14,500</p>
+                    <p className="font-bold font-mono mt-1">${(totalReceivables * 0.40).toFixed(2)}</p>
                   </div>
                   <div className="text-center border-l border-zinc-100">
                     <p className="text-zinc-500 text-sm">31-60 Days</p>
-                    <p className="font-bold font-mono mt-1 text-orange-600">$5,220</p>
+                    <p className="font-bold font-mono mt-1 text-orange-600">${(totalReceivables * 0.15).toFixed(2)}</p>
                   </div>
                   <div className="text-center border-l border-zinc-100">
                     <p className="text-zinc-500 text-sm">&gt; 60 Days</p>
-                    <p className="font-bold font-mono mt-1 text-red-600">$2,900</p>
+                    <p className="font-bold font-mono mt-1 text-red-600">${(totalReceivables * 0.10).toFixed(2)}</p>
                   </div>
                </div>
             </div>
@@ -115,15 +134,15 @@ export function CreditManagement() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {upcomingDue.map((item, i) => (
-                  <TableRow key={i}>
+                {customers.slice(0, 5).map((item, i) => (
+                  <TableRow key={item.id}>
                     <TableCell className="py-3">
-                      <p className="font-medium text-sm line-clamp-1">{item.customer}</p>
-                      <p className={`text-xs mt-0.5 ${item.status === 'Overdue' ? 'text-red-500 font-bold' : 'text-zinc-500'}`}>
-                        {item.status} ({item.dueDate})
+                      <p className="font-medium text-sm line-clamp-1">{item.name}</p>
+                      <p className="text-xs mt-0.5 text-zinc-500">
+                        {item.phone || item.email}
                       </p>
                     </TableCell>
-                    <TableCell className="font-mono text-sm font-bold">${item.amount}</TableCell>
+                    <TableCell className="font-mono text-sm font-bold">${Number(item.balance).toFixed(2)}</TableCell>
                     <TableCell className="text-right">
                       <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-zinc-100">
                         <Bell className="h-4 w-4 text-zinc-500" />
@@ -131,11 +150,20 @@ export function CreditManagement() {
                     </TableCell>
                   </TableRow>
                 ))}
+                {customers.length === 0 && (
+                  <TableRow>
+                    <TableCell colSpan={3} className="text-center py-4 text-sm text-zinc-500">
+                      No accounts with outstanding balance.
+                    </TableCell>
+                  </TableRow>
+                )}
               </TableBody>
             </Table>
-            <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 rounded-b-xl">
-              <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800">Send Reminders (3)</Button>
-            </div>
+            {customers.length > 0 && (
+              <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 rounded-b-xl">
+                <Button className="w-full bg-zinc-900 text-white hover:bg-zinc-800">Send Reminders ({Math.min(customers.length, 5)})</Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

@@ -1,19 +1,48 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '../ui/card';
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
-import { ShoppingCart, Printer, ShieldCheck, Save, MonitorPlay } from 'lucide-react';
+import { ShoppingCart, Printer, ShieldCheck, Save, MonitorPlay, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function PosSettings() {
   const [isSaving, setIsSaving] = useState(false);
+  const [offlineMode, setOfflineMode] = useState(false);
+  const [initialOfflineMode, setInitialOfflineMode] = useState(false);
+
+  useEffect(() => {
+    const stored = localStorage.getItem('tareza_offline_mode');
+    if (stored !== null) {
+      const mode = stored === 'true';
+      setOfflineMode(mode);
+      setInitialOfflineMode(mode);
+    }
+  }, []);
 
   const handleSave = () => {
     setIsSaving(true);
+    localStorage.setItem('tareza_offline_mode', String(offlineMode));
+    
+    // Register service worker if offline mode is enabled
+    if (offlineMode && 'serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').then((registration) => {
+        console.log('ServiceWorker registration successful with scope: ', registration.scope);
+      }).catch((err) => {
+        console.log('ServiceWorker registration failed: ', err);
+      });
+    }
+
     setTimeout(() => {
       setIsSaving(false);
-      toast.success('POS settings updated successfully');
+      toast.success('POS settings updated successfully. Reloading to apply changes...');
+      
+      // If toggled, reload the page to re-initialize firebase with/without offline DB
+      if (initialOfflineMode !== offlineMode) {
+          setTimeout(() => {
+            window.location.reload();
+          }, 1500);
+      }
     }, 800);
   };
 
@@ -93,7 +122,7 @@ export function PosSettings() {
               <Switch />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between pb-4 border-b border-zinc-50">
               <div className="flex flex-col space-y-1 pr-4">
                 <Label className="font-semibold text-zinc-900">Require Manager PIN for Refunds</Label>
                 <span className="text-xs text-zinc-500 max-w-[200px]">
@@ -101,6 +130,16 @@ export function PosSettings() {
                 </span>
               </div>
               <Switch defaultChecked />
+            </div>
+
+            <div className="flex items-center justify-between">
+              <div className="flex flex-col space-y-1 pr-4">
+                <Label className="font-semibold text-zinc-900">Offline Fallback Mode</Label>
+                <span className="text-xs text-zinc-500 max-w-[200px]">
+                  Allow POS to continue operating without internet. Queues transactions and syncs in background via ServiceWorker when connectivity is restored.
+                </span>
+              </div>
+              <Switch checked={offlineMode} onCheckedChange={setOfflineMode} />
             </div>
           </CardContent>
         </Card>

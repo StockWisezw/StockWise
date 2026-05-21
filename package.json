@@ -13,7 +13,7 @@
   "dependencies": {
     "@base-ui/react": "^1.4.1",
     "@fontsource-variable/geist": "^5.2.8",
-    "@google/genai": "^1.52.0",
+    "@google/genai": "^2.4.0",
     "@hookform/resolvers": "^5.2.2",
     "@radix-ui/react-dialog": "^1.1.15",
     "@supabase/supabase-js": "^2.105.4",
@@ -24,6 +24,7 @@
     "cmdk": "^1.1.1",
     "cors": "^2.8.6",
     "date-fns": "^4.1.0",
+    "domexception": "^4.0.0",
     "dotenv": "^17.2.3",
     "express": "^4.22.2",
     "firebase": "^12.13.0",
@@ -58,5 +59,8 @@
     "tsx": "^4.21.0",
     "typescript": "~5.8.2",
     "vite": "^6.2.3"
+  },
+  "overrides": {
+    "node-domexception": "file:./mock-domexception"
   }
 }

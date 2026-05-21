@@ -3,11 +3,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Button } from '../ui/button';
 import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
+import { Slider } from '../ui/slider';
 import { Sparkles, BrainCircuit, BarChart3, MessageSquare, Save } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AiSettings() {
   const [isSaving, setIsSaving] = useState(false);
+  const [sensitivity, setSensitivity] = useState(50); // 0: Conservative, 50: Balanced, 100: Aggressive
 
   const handleSave = () => {
     setIsSaving(true);
@@ -15,6 +17,12 @@ export function AiSettings() {
       setIsSaving(false);
       toast.success('AI preferences updated successfully');
     }, 800);
+  };
+
+  const getSensitivityLabel = (val: number) => {
+    if (val < 33) return 'Conservative';
+    if (val < 67) return 'Balanced';
+    return 'Aggressive';
   };
 
   return (
@@ -59,14 +67,37 @@ export function AiSettings() {
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
-               <div className="flex items-center justify-between pb-4 border-b border-zinc-50">
-                <div className="flex flex-col space-y-1 pr-4">
-                  <Label className="font-semibold text-zinc-900">Demand Forecasting</Label>
-                  <span className="text-xs text-zinc-500">
-                    AI will analyze sales velocity to predict future stock needs.
-                  </span>
+               <div className="flex flex-col pb-4 border-b border-zinc-50 space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col space-y-1 pr-4">
+                    <Label className="font-semibold text-zinc-900">Demand Forecasting</Label>
+                    <span className="text-xs text-zinc-500">
+                      AI will analyze sales velocity to predict future stock needs.
+                    </span>
+                  </div>
+                  <Switch defaultChecked />
                 </div>
-                <Switch defaultChecked />
+                
+                <div className="pt-2">
+                  <div className="flex items-center justify-between mb-2">
+                    <Label className="text-sm font-medium text-zinc-700">Forecasting Sensitivity</Label>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 text-zinc-700">
+                      {getSensitivityLabel(sensitivity)}
+                    </span>
+                  </div>
+                  <Slider 
+                    value={[sensitivity]} 
+                    onValueChange={(val) => setSensitivity(val[0])} 
+                    max={100} 
+                    step={1} 
+                    className="py-4"
+                  />
+                  <div className="flex justify-between text-[10px] text-zinc-400 font-medium px-1">
+                    <span>Conservative</span>
+                    <span>Balanced</span>
+                    <span>Aggressive</span>
+                  </div>
+                </div>
               </div>
                <div className="flex items-center justify-between">
                 <div className="flex flex-col space-y-1 pr-4">
