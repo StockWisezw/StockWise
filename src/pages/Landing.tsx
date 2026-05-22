@@ -1,12 +1,43 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
-import { Store, TrendingUp, ShieldCheck, Zap, Package, Key, Building2, ArrowRight, CheckCircle2, Calculator, Users, BarChart3, Receipt, ShoppingCart, Activity } from 'lucide-react';
+import { Store, TrendingUp, ShieldCheck, Zap, Package, Key, Building2, ArrowRight, CheckCircle2, Calculator, Users, BarChart3, Receipt, ShoppingCart, Activity, Mail, Phone, MessageCircle } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
 
 export default function Landing() {
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center overflow-x-hidden">
+      {/* Contact Top Bar */}
+      <div className="w-full bg-zinc-900 border-b border-zinc-800 hidden md:block">
+        <div className="max-w-7xl mx-auto px-6 h-10 flex items-center justify-between text-xs font-medium">
+          <div className="text-zinc-400">
+            Welcome to Tareza ERP - Your Trusted Business Partner in Zimbabwe
+          </div>
+          <div className="flex items-center space-x-6">
+            <a href="mailto:admin@tarezaerp.co.zw" className="flex items-center text-zinc-300 hover:text-white transition-colors group">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-800 group-hover:bg-blue-500/20 text-zinc-400 group-hover:text-blue-400 mr-2 transition-colors">
+                <Mail className="w-3 h-3" />
+              </span>
+              admin@tarezaerp.co.zw
+            </a>
+            <div className="w-px h-4 bg-zinc-800" />
+            <a href="tel:+263784553570" className="flex items-center text-zinc-300 hover:text-white transition-colors group">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-800 group-hover:bg-amber-500/20 text-zinc-400 group-hover:text-amber-400 mr-2 transition-colors">
+                <Phone className="w-3 h-3" />
+              </span>
+              +263 784553570
+            </a>
+            <div className="w-px h-4 bg-zinc-800" />
+            <a href="https://wa.me/263776699950" target="_blank" rel="noopener noreferrer" className="flex items-center text-zinc-300 hover:text-white transition-colors group">
+              <span className="flex items-center justify-center w-6 h-6 rounded-full bg-zinc-800 group-hover:bg-emerald-500/20 text-zinc-400 group-hover:text-emerald-400 mr-2 transition-colors">
+                <MessageCircle className="w-3 h-3" />
+              </span>
+              WhatsApp Us
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Navigation */}
       <nav className="w-full max-w-7xl mx-auto flex items-center justify-between p-6 z-50 bg-background/80 backdrop-blur-md sticky top-0 border-b border-border/50">
         <div className="flex items-center space-x-2">
