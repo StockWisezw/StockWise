@@ -164,38 +164,21 @@ export default function Layout() {
   }
 
   const NavLinks = ({ mobile }: { mobile?: boolean }) => (
-    <div className="flex flex-col space-y-0.5">
+    <div className="flex flex-col px-2">
       {navigation.map((item) => {
         const isActive = location.pathname === item.href;
         
-        if (mobile) {
-          return (
-            <Link
-              key={item.name}
-              to={item.href}
-              className={`flex items-center space-x-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-                isActive 
-                  ? 'bg-zinc-100 text-zinc-900 border-l-4 border-primary dark:bg-zinc-800 dark:text-zinc-50' 
-                  : 'text-zinc-500 hover:bg-zinc-50 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-50'
-              }`}
-            >
-              <item.icon className={`h-4 w-4 ${isActive ? 'text-primary' : ''}`} />
-              <span>{item.name}</span>
-            </Link>
-          )
-        }
-
         return (
           <Link
             key={item.name}
             to={item.href}
-            className={`flex items-center space-x-3 rounded-lg px-3 py-1 text-sm font-medium transition-colors mt-0.5 ${
+            className={`flex items-center space-x-3 rounded-full px-4 py-2.5 text-sm font-medium transition-colors mb-1 ${
               isActive 
-                ? 'bg-primary text-primary-foreground shadow-sm' 
-                : 'text-zinc-400 hover:bg-white/10 hover:text-white'
+                ? 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' 
+                : 'text-zinc-600 hover:bg-zinc-100/80 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-800/50 dark:hover:text-zinc-50'
             }`}
           >
-            <item.icon className={`h-4 w-4 ${isActive ? 'text-primary-foreground' : 'text-zinc-400'}`} />
+            <item.icon className={`h-[18px] w-[18px] ${isActive ? 'text-blue-700 dark:text-blue-400' : 'text-zinc-500 dark:text-zinc-400'}`} />
             <span>{item.name}</span>
           </Link>
         )
@@ -204,103 +187,104 @@ export default function Layout() {
   );
 
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 max-h-screen overflow-hidden">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-zinc-950 max-h-screen overflow-hidden font-sans text-zinc-900 dark:text-zinc-100">
       <SyncManager />
       <SubscriptionBanner />
       <div className="flex flex-1 overflow-hidden">
         
         {/* Desktop Sidebar */}
-        <aside className="hidden md:flex w-64 flex-col bg-secondary text-secondary-foreground border-r border-secondary shadow-xl overflow-hidden shrink-0">
-          <div className="p-5 flex items-center space-x-3 border-b border-white/10 bg-secondary">
-            <div className="bg-primary p-2 rounded-lg shadow-sm">
-              <Store className="h-6 w-6 text-primary-foreground" />
+        <aside className="hidden md:flex w-[260px] flex-col bg-zinc-50 dark:bg-[#18181b] border-r border-zinc-200 dark:border-zinc-800/80 overflow-hidden shrink-0">
+          <div className="h-16 px-6 flex items-center space-x-3">
+            <div className="bg-blue-600 p-1.5 rounded shadow-sm">
+              <Store className="h-4 w-4 text-white" />
             </div>
             <div className="flex flex-col">
-              <span className="text-xl font-bold tracking-tight text-white leading-none">TAREZA</span>
-              <span className="text-[10px] tracking-[0.2em] text-primary font-medium mt-1 uppercase">ERP</span>
+              <span className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">TAREZA</span>
             </div>
           </div>
-          <div className="flex-1 overflow-auto py-5 px-3 bg-secondary">
+          <div className="flex-1 overflow-auto py-4">
             <NavLinks />
           </div>
-          <div className="p-4 border-t border-white/10 bg-secondary/90 flex flex-col gap-2">
+          <div className="p-4 flex flex-col gap-2">
             {user?.email === 'tapiwagahadza54@gmail.com' && (
-              <div className="px-3 py-1.5 bg-primary/20 rounded-md text-xs font-semibold text-primary uppercase text-center tracking-widest border border-primary/30">
+              <div className="px-3 py-1.5 bg-blue-500/10 rounded-full text-[10px] font-bold text-blue-600 dark:text-blue-400 uppercase text-center tracking-widest mx-2 mb-2">
                 Superadmin
               </div>
             )}
-            <Button variant="ghost" className="w-full justify-start text-zinc-400 hover:text-white hover:bg-white/10" onClick={handleSignOut}>
-              <LogOut className="mr-3 h-4 w-4" />
+            <Button variant="ghost" className="w-full justify-start text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-zinc-50 rounded-full px-4" onClick={handleSignOut}>
+              <LogOut className="mr-3 h-[18px] w-[18px]" />
               Logout
             </Button>
           </div>
         </aside>
 
         {/* Main Content */}
-        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-background">
+        <div className="flex-1 flex flex-col min-w-0 overflow-hidden bg-white dark:bg-zinc-950">
           
           {/* Topbar */}
-          <header className="flex h-16 items-center justify-between border-b bg-white dark:bg-zinc-950 px-4 sm:px-6">
+          <header className="flex h-16 items-center justify-between border-b border-zinc-200 dark:border-zinc-800/80 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-sm px-4 sm:px-6">
             <div className="flex items-center">
               <Sheet>
-                <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden mr-2" />}>
+                <SheetTrigger render={<Button variant="ghost" size="icon" className="md:hidden mr-2 rounded-full" />}>
                   <Menu className="h-5 w-5" />
                 </SheetTrigger>
-                <SheetContent side="left" className="w-64 p-0">
-                  <div className="p-4 flex items-center space-x-2 border-b">
-                    <Store className="h-5 w-5 text-primary" />
-                    <span className="text-lg font-bold tracking-tight">Tareza ERP</span>
+                <SheetContent side="left" className="w-[260px] p-0 bg-zinc-50 dark:bg-[#18181b]">
+                  <div className="h-16 px-6 flex items-center space-x-3 border-b border-zinc-200 dark:border-zinc-800/80">
+                    <div className="bg-blue-600 p-1.5 rounded shadow-sm">
+                      <Store className="h-4 w-4 text-white" />
+                    </div>
+                    <span className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">TAREZA</span>
                   </div>
-                  <div className="p-3">
+                  <div className="py-4">
                     <NavLinks mobile />
                   </div>
                 </SheetContent>
               </Sheet>
               
-              <div className="hidden sm:flex relative w-64 max-w-md">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-zinc-500" />
+              <div className="hidden sm:flex relative w-64 max-w-md ml-2">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                 <Input 
                   type="search" 
-                  placeholder="Search inventory, sales..." 
-                  className="pl-9 bg-zinc-50 border-transparent focus-visible:bg-white focus-visible:border-zinc-300 shadow-none h-9" 
+                  placeholder="Ask AIAssistant or search..." 
+                  className="pl-9 bg-zinc-100/50 dark:bg-zinc-900/50 border-transparent focus-visible:bg-white dark:focus-visible:bg-zinc-900 focus-visible:border-blue-500/50 shadow-none h-10 rounded-full text-sm" 
                 />
               </div>
             </div>
 
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2 sm:space-x-3">
               <SyncStatusIndicator />
-              <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 hidden sm:block" />
+              <div className="h-4 w-px bg-zinc-200 dark:bg-zinc-800 hidden sm:block mx-1" />
               <ThemeToggle />
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="h-5 w-5 text-zinc-500" />
-                <span className="absolute top-1.5 right-1.5 h-2 w-2 rounded-full bg-red-500" />
+              <Button variant="ghost" size="icon" className="relative rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800">
+                <Bell className="h-[18px] w-[18px] text-zinc-600 dark:text-zinc-400" />
+                <span className="absolute top-2 right-2.5 h-1.5 w-1.5 rounded-full bg-red-500" />
               </Button>
               
               <DropdownMenu>
-                <DropdownMenuTrigger render={<Button variant="ghost" className="relative h-8 w-8 rounded-full" />}>
-                  <Avatar className="h-8 w-8">
+                <DropdownMenuTrigger render={<Button variant="ghost" className="relative h-8 w-8 rounded-full ml-1" />}>
+                  <Avatar className="h-8 w-8 hover:brightness-95 transition-all">
                     <AvatarImage src="" alt="User" />
-                    <AvatarFallback className="bg-zinc-100 text-zinc-900 border text-xs">
+                    <AvatarFallback className="bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 text-xs font-semibold">
                       {user?.email?.charAt(0).toUpperCase() || 'A'}
                     </AvatarFallback>
                   </Avatar>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56" align="end" forceMount>
-                  <DropdownMenuLabel className="font-normal">
+                <DropdownMenuContent className="w-64" align="end" forceMount>
+                  <DropdownMenuLabel className="font-normal p-3">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none">Admin User</p>
-                      <p className="text-xs leading-none text-muted-foreground">{user?.email || 'admin@tareza.co.zw'}</p>
+                      <p className="text-sm font-semibold leading-none">{user?.email || 'admin@tareza.co.zw'}</p>
+                      <p className="text-xs leading-none text-zinc-500">Administrator</p>
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem>Profile Settings</DropdownMenuItem>
-                  <DropdownMenuItem>Branch Setup</DropdownMenuItem>
+                  <DropdownMenuItem className="py-2 cursor-pointer">Profile Settings</DropdownMenuItem>
+                  <DropdownMenuItem className="py-2 cursor-pointer">Branch Setup</DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setIsLocked(true)} className="font-medium text-amber-600">
+                  <DropdownMenuItem onClick={() => setIsLocked(true)} className="py-2 font-medium text-amber-600 dark:text-amber-500 cursor-pointer">
                     <Lock className="w-4 h-4 mr-2" /> Lock Terminal
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleSignOut} className="text-red-600">
+                  <DropdownMenuItem onClick={handleSignOut} className="py-2 text-red-600 dark:text-red-400 cursor-pointer">
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -309,7 +293,7 @@ export default function Layout() {
           </header>
 
           <main className="flex-1 overflow-auto p-4 sm:p-6 lg:p-8">
-            <div className="mx-auto max-w-6xl">
+            <div className="mx-auto max-w-[1400px]">
               <Outlet />
             </div>
           </main>
