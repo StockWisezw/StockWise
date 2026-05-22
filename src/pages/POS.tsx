@@ -205,7 +205,7 @@ export default function POS() {
         const { data: userData } = await supabase.auth.getUser();
           let businessId = null;
           if (userData?.user) {
-            const { data: businessData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).single();
+            const { data: businessData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
             businessId = businessData?.business_id;
           }
 

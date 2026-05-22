@@ -26,7 +26,7 @@ export function UserManagement() {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) return;
 
-        const { data: buData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).single();
+        const { data: buData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
         if (!buData) return;
         setBusinessId(buData.business_id);
 

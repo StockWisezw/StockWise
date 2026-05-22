@@ -524,10 +524,10 @@ WITH CHECK (business_id IN (SELECT auth_user_businesses()));
 -- ==========================================
 -- 11. ENABLE REALTIME
 -- ==========================================
-BEGIN;
-  DROP PUBLICATION IF EXISTS supabase_realtime;
-  CREATE PUBLICATION supabase_realtime;
-COMMIT;
+-- BEGIN;
+--   DROP PUBLICATION IF EXISTS supabase_realtime;
+--   CREATE PUBLICATION supabase_realtime;
+-- COMMIT;
 
 ALTER PUBLICATION supabase_realtime ADD TABLE businesses;
 ALTER PUBLICATION supabase_realtime ADD TABLE branches;

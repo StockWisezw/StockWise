@@ -98,9 +98,9 @@ export default function Dashboard() {
           .select('business_id')
           .eq('user_id', userData.user.id)
           .limit(1)
-          .single();
+          .maybeSingle();
 
-        const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', userData.user.id).single();
+        const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', userData.user.id).limit(1).maybeSingle();
         if (profile?.first_name) {
           setProfileName(profile.first_name);
         }

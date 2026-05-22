@@ -104,7 +104,7 @@ export function ProductList() {
          .select('business_id')
          .eq('user_id', userData.user.id)
          .limit(1)
-         .single();
+          .maybeSingle();
 
        if (businessError || !businessData) {
          toast.error(`Error: ${businessError?.message || 'You are not part of any business'}. Cannot add product.`);
@@ -133,7 +133,7 @@ export function ProductList() {
            .select('id')
            .eq('business_id', businessData.business_id)
            .limit(1)
-           .single();
+          .maybeSingle();
            
          if (branchData) {
            await supabase.from('inventory').insert({

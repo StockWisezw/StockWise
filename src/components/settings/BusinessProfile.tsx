@@ -33,7 +33,7 @@ export function BusinessProfile() {
         const { data: userData } = await supabase.auth.getUser();
         if (!userData?.user) return;
         
-        const { data: buData, error: buError } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).single();
+        const { data: buData, error: buError } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
         if (buError || !buData) {
           console.error("No business_user found", buError);
           return;

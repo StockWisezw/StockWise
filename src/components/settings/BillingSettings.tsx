@@ -17,13 +17,13 @@ export function BillingSettings() {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
       
-      const { data: buData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).single();
+      const { data: buData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
       if (!buData) return;
 
       const { data: business } = await supabase.from('businesses').select('*').eq('id', buData.business_id).single();
       if (business) {
          setBusinessData(business);
-         const { data: sub } = await supabase.from('subscriptions').select('*').eq('business_id', business.id).order('created_at', { ascending: false }).limit(1).single();
+         const { data: sub } = await supabase.from('subscriptions').select('*').eq('business_id', business.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
          if (sub) setSubscription(sub);
 
          const { data: bUsers } = await supabase.from('business_users').select('id').eq('business_id', business.id);

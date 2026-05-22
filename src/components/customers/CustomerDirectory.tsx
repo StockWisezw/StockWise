@@ -107,7 +107,7 @@ export function CustomerDirectory() {
          .select('business_id')
          .eq('user_id', userData.user.id)
          .limit(1)
-         .single();
+          .maybeSingle();
 
        if (businessError || !businessData) {
          toast.error("You are not part of any business. Cannot add customer.");
