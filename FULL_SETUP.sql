@@ -1039,8 +1039,8 @@ INSERT INTO storage.buckets (id, name, public) VALUES
 ('tareza-documents', 'tareza-documents', false)
 ON CONFLICT (id) DO NOTHING;
 
--- Enable RLS on storage.objects (if not already enabled)
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+-- -- Enable RLS on storage.objects (if not already enabled)
+-- ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 
 -- Set up Storage RLS Policies
 
