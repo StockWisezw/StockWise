@@ -13,7 +13,8 @@ import {
   sendSignInLinkToEmail,
   isSignInWithEmailLink,
   signInWithEmailLink,
-  User
+  User,
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { 
   getFirestore, 
@@ -443,6 +444,14 @@ export const firebaseService = {
         await sendSignInLinkToEmail(auth, email, actionCodeSettings);
         // Persist email locally to complete login without re-typing
         window.localStorage.setItem('emailForSignIn', email);
+        return { data: true, error: null };
+      } catch (error) {
+        return { data: null, error };
+      }
+    },
+    sendPasswordReset: async (email: string) => {
+      try {
+        await sendPasswordResetEmail(auth, email);
         return { data: true, error: null };
       } catch (error) {
         return { data: null, error };

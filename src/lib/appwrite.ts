@@ -47,6 +47,7 @@ export const appwrite = {
     signInWithOAuth: firebaseService.auth.signInWithOAuth,
     signInAnonymously: firebaseService.auth.signInAnonymously,
     sendMagicLink: firebaseService.auth.sendMagicLink,
+    sendPasswordReset: firebaseService.auth.sendPasswordReset,
     completeMagicLinkSession: firebaseService.auth.completeMagicLinkSession,
     signOut: firebaseService.auth.signOut,
     onAuthStateChange: (cb: any) => {
