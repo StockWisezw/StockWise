@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '../components/ui/button';
 import { Store, TrendingUp, ShieldCheck, Zap, Package, Key, Building2, ArrowRight, CheckCircle2, Calculator, Users, BarChart3, Receipt, ShoppingCart, Activity, Mail, Phone, MessageCircle } from 'lucide-react';
 import { ThemeToggle } from '../components/ThemeToggle';
+import { TarezaLogo } from '../components/ui/Logo';
 
 export default function Landing() {
   return (
@@ -40,11 +41,8 @@ export default function Landing() {
 
       {/* Navigation */}
       <nav className="w-full max-w-7xl mx-auto flex items-center justify-between p-6 z-50 bg-background/80 backdrop-blur-md sticky top-0 border-b border-border/50">
-        <div className="flex items-center space-x-2">
-          <div className="bg-primary p-2 rounded-lg shadow-sm">
-            <Store className="w-6 h-6 text-primary-foreground" />
-          </div>
-          <span className="text-2xl font-bold tracking-tight text-secondary dark:text-zinc-50">TAREZA</span>
+        <div className="flex items-center">
+          <TarezaLogo size="sm" showSubtitle={false} />
         </div>
         
         <div className="hidden md:flex space-x-8 font-medium text-sm text-zinc-500">
@@ -307,9 +305,8 @@ export default function Landing() {
       {/* Footer */}
       <footer className="w-full border-t border-border/50 py-12 bg-secondary text-secondary-foreground">
         <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center text-sm">
-           <div className="flex items-center space-x-2 mb-4 md:mb-0">
-             <Store className="w-5 h-5 text-primary" />
-             <span className="font-bold tracking-widest text-white">TAREZA ERP</span>
+           <div className="flex items-center mb-4 md:mb-0">
+             <TarezaLogo size="sm" showSubtitle={false} variant="dark" />
            </div>
            <div className="flex flex-col md:flex-row items-center gap-4 text-zinc-400 mb-4 md:mb-0">
              <a href="mailto:support@tarezaerp.co.zw" className="hover:text-primary transition-colors">Support: support@tarezaerp.co.zw</a>

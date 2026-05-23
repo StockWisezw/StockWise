@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { useReactToPrint } from 'react-to-print';
 import { ReceiptPrint } from '../components/pos/ReceiptPrint';
 import { toast } from 'sonner';
-import { supabase } from '../lib/supabase';
+import { appwrite } from '../lib/appwrite';
 
 export default function ReceiptHistory() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -26,7 +26,7 @@ export default function ReceiptHistory() {
   const fetchSales = async () => {
     setIsLoading(true);
     try {
-      const { data } = await supabase.from('sales')
+      const { data } = await appwrite.from('sales')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(50);

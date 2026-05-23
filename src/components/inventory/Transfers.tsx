@@ -6,7 +6,7 @@ import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { appwrite } from '@/lib/appwrite';
 
 export function Transfers() {
   const [transfers, setTransfers] = useState<any[]>([]);
@@ -19,7 +19,7 @@ export function Transfers() {
   const fetchTransfers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await appwrite
         .from('inventory_transfers')
         .select(`
           id,
@@ -44,7 +44,7 @@ export function Transfers() {
 
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
-      const { error } = await supabase
+      const { error } = await appwrite
         .from('inventory_transfers')
         .update({ status: newStatus })
         .eq('id', id);

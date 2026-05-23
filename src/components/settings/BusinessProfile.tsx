@@ -14,7 +14,7 @@ import { Textarea } from "../ui/textarea";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Camera, Building2, Save } from "lucide-react";
 import { toast } from "sonner";
-import { supabase } from "../../lib/supabase";
+import { appwrite } from "../../lib/appwrite";
 
 export function BusinessProfile() {
   const [isSaving, setIsSaving] = useState(false);
@@ -30,16 +30,16 @@ export function BusinessProfile() {
   useEffect(() => {
     async function loadBusiness() {
       try {
-        const { data: userData } = await supabase.auth.getUser();
+        const { data: userData } = await appwrite.auth.getUser();
         if (!userData?.user) return;
         
-        const { data: buData, error: buError } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
+        const { data: buData, error: buError } = await appwrite.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
         if (buError || !buData) {
           console.error("No business_user found", buError);
           return;
         }
 
-        const { data, error } = await supabase
+        const { data, error } = await appwrite
           .from("businesses")
           .select("*")
           .eq('id', buData.business_id)
@@ -69,7 +69,7 @@ export function BusinessProfile() {
     try {
       if (!businessData) {
         // Create new business profile
-        const { data, error } = await supabase
+        const { data, error } = await appwrite
           .from("businesses")
           .insert({
             name: name || "My Business",
@@ -86,7 +86,7 @@ export function BusinessProfile() {
         toast.success("Business profile created successfully");
       } else {
         // Update existing business profile
-        const { error } = await supabase
+        const { error } = await appwrite
           .from("businesses")
           .update({
             name,

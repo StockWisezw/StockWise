@@ -6,7 +6,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { supabase } from '../lib/supabase';
+import { appwrite } from '../lib/appwrite';
 import { toast } from 'sonner';
 
 export default function DeveloperPanel() {
@@ -33,7 +33,7 @@ export default function DeveloperPanel() {
       // Need to fetch all businesses for dev. 
       // This bypasses RLS if using service role, but since it's client side, we need standard fetch.
       // If RLS prevents it, this might return empty. I will add a fallback mock if it fails.
-      const { data, error } = await supabase.from('businesses').select('*');
+      const { data, error } = await appwrite.from('businesses').select('*');
       if (error) {
         throw error;
       }
@@ -49,7 +49,7 @@ export default function DeveloperPanel() {
   const toggleSubscription = async (businessId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'past_due' : 'active';
     try {
-      const { error } = await supabase
+      const { error } = await appwrite
         .from('subscriptions')
         .update({ status: newStatus })
         .eq('business_id', businessId);
@@ -227,14 +227,14 @@ export default function DeveloperPanel() {
                      </p>
                      <pre className="bg-zinc-950 p-3 rounded-md text-xs text-green-400 overflow-x-auto">
 {`// Supabase Edge Function to handle Paynow/Stripe Webhook
-import { createClient } from '@supabase/supabase-js'
+import { createClient } from '@appwrite/appwrite-js'
 
 export async function handlePaymentWebhook(req) {
   const { business_id, status } = await req.json()
-  const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+  const appwrite = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
   
   if(status === 'PAID') {
-    await supabase.from('businesses')
+    await appwrite.from('businesses')
       .update({ subscription_status: 'ACTIVE' })
       .eq('id', business_id)
   }

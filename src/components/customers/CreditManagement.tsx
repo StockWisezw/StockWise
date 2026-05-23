@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { AlertTriangle, TrendingUp, DollarSign, CalendarClock, Download, Bell } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { supabase } from '../../lib/supabase';
+import { appwrite } from '../../lib/appwrite';
 
 export function CreditManagement() {
   const [customers, setCustomers] = useState<any[]>([]);
@@ -13,7 +13,7 @@ export function CreditManagement() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const { data: custs } = await supabase.from('customers').select('*');
+        const { data: custs } = await appwrite.from('customers').select('*');
         if (custs) {
             const withBalance = custs.filter(c => Number(c.balance) > 0);
             

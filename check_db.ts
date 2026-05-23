@@ -1,11 +1,13 @@
-import { createClient } from '@supabase/supabase-js';
+import { appwrite } from './src/lib/appwrite.js';
 import dotenv from 'dotenv';
 dotenv.config();
-const supabaseUrl = process.env.VITE_SUPABASE_URL;
-const supabaseKey = process.env.VITE_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+
 async function run() {
-  const { data, error } = await supabase.from('products').select('*').limit(1);
-  console.log(error ? error : Object.keys(data[0] || {}));
+  const { data, error } = await appwrite.from('products').select('*').limit(1);
+  if (error) {
+    console.error('Appwrite check error:', error);
+  } else {
+    console.log('Appwrite check succeeded. Product items parsed:', data);
+  }
 }
 run();

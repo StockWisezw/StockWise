@@ -5,7 +5,7 @@ import { Plus, Store, Warehouse, MapPin, MoreHorizontal, LayoutGrid, Loader2 } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
-import { supabase } from '../../lib/supabase';
+import { appwrite } from '../../lib/appwrite';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -22,7 +22,7 @@ export function BranchWarehouseSettings() {
   const [newBranchAddress, setNewBranchAddress] = useState('');
 
   const fetchBranches = async (bizId: string) => {
-    const { data } = await supabase.from('branches').select('*').eq('business_id', bizId);
+    const { data } = await appwrite.from('branches').select('*').eq('business_id', bizId);
     if (data) {
       const branches = data.sort((a: any, b: any) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
       setLocations(branches);
@@ -32,10 +32,10 @@ export function BranchWarehouseSettings() {
   useEffect(() => {
     async function loadBranches() {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        const { data: { user } } = await appwrite.auth.getUser();
         if (!user) return;
 
-        const { data: buData } = await supabase.from('business_users').select('business_id').eq('user_id', user.id);
+        const { data: buData } = await appwrite.from('business_users').select('business_id').eq('user_id', user.id);
         
         if (!buData || buData.length === 0) return;
         const bizId = buData[0].business_id;
@@ -60,7 +60,7 @@ export function BranchWarehouseSettings() {
     }
     setIsAdding(true);
     try {
-        const { error } = await supabase.from('branches').insert([{
+        const { error } = await appwrite.from('branches').insert([{
             business_id: businessId,
             name: newBranchName,
             type: newBranchType,

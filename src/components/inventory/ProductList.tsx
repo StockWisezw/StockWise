@@ -15,7 +15,7 @@ import {
   TableCell,
 } from '../ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { supabase } from '../../lib/supabase';
+import { appwrite } from '../../lib/appwrite';
 import { toast } from 'sonner';
 
 export function ProductList() {
@@ -38,21 +38,32 @@ export function ProductList() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .order('name');
+      const [productsRes, inventoryRes, categoriesRes] = await Promise.all([
+        appwrite.from('products').select('*').eq('is_active', true).order('name'),
+        appwrite.from('inventory').select('*'),
+        appwrite.from('categories').select('*')
+      ]);
       
-      if (error) {
-        throw error;
+      if (productsRes.error) {
+        throw productsRes.error;
       }
       
-      if (data && data.length > 0) {
-        setProducts(data);
-      } else {
-        setProducts([]);
-      }
+      const productsData = productsRes.data || [];
+      const inventoryData = inventoryRes.data || [];
+      const categoriesData = categoriesRes.data || [];
+      
+      const mappedProducts = productsData.map(p => {
+        const productInventory = inventoryData.filter((i: any) => i.product_id === p.id);
+        const category = categoriesData.find((c: any) => c.id === p.category_id);
+        
+        return {
+          ...p,
+          inventory: productInventory.length > 0 ? productInventory : [{ quantity: 0 }],
+          categories: category ? { name: category.name } : null
+        };
+      });
+      
+      setProducts(mappedProducts);
     } catch (err) {
       console.error(err);
       toast.error("Could not fetch products");
@@ -65,7 +76,7 @@ export function ProductList() {
     fetchProducts();
 
     // Subscribe to realtime changes on products
-    const channel = supabase
+    const channel = appwrite
       .channel('public:products')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
         fetchProducts(); // Refresh list on change
@@ -73,13 +84,13 @@ export function ProductList() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      appwrite.removeChannel(channel);
     };
   }, []);
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await supabase.from('products').update({ is_active: false }).eq('id', id);
+      const { error } = await appwrite.from('products').update({ is_active: false }).eq('id', id);
       if (error) throw error;
       toast.success("Product deleted successfully");
       // fetchProducts() will be called automatically by Realtime if active
@@ -95,11 +106,11 @@ export function ProductList() {
        return;
     }
     try {
-       const { data: userData } = await supabase.auth.getUser();
+       const { data: userData } = await appwrite.auth.getUser();
        if (!userData?.user) throw new Error("Not authenticated");
 
        // Fetch user's business_id
-       const { data: businessData, error: businessError } = await supabase
+       const { data: businessData, error: businessError } = await appwrite
          .from('business_users')
          .select('business_id')
          .eq('user_id', userData.user.id)
@@ -114,7 +125,7 @@ export function ProductList() {
        const price = parseFloat(newProductPrice);
        const finalSku = isPack && parseInt(packSize) > 1 ? `${newProductSKU}|PK:${packSize}` : newProductSKU;
        
-       const { data: newProduct, error: productError } = await supabase.from('products').insert({
+       const { data: newProduct, error: productError } = await appwrite.from('products').insert({
          business_id: businessData.business_id,
          name: newProductName,
          sku: finalSku,
@@ -128,7 +139,7 @@ export function ProductList() {
        // Set initial stock if required
        const stock = parseInt(newProductStock, 10);
        if (stock > 0) {
-         const { data: branchData } = await supabase
+         const { data: branchData } = await appwrite
            .from('branches')
            .select('id')
            .eq('business_id', businessData.business_id)
@@ -136,7 +147,7 @@ export function ProductList() {
           .maybeSingle();
            
          if (branchData) {
-           await supabase.from('inventory').insert({
+           await appwrite.from('inventory').insert({
              business_id: businessData.business_id,
              branch_id: branchData.id,
              product_id: newProduct.id,

@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 import { Card } from "./ui/card";
-import { supabase } from "../lib/supabase";
+import { appwrite } from "../lib/appwrite";
 
 interface Message {
   id: string;

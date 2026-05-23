@@ -32,15 +32,17 @@ const schema = [
         name: 'businesses',
         attributes: [
             { key: 'name', type: 'string', required: true, size: 255 },
-            { key: 'created_at', type: 'datetime', required: false }
-        ]
-    },
-    {
-        name: 'roles',
-        attributes: [
-            { key: 'business_id', type: 'string', required: true, size: 255 },
-            { key: 'name', type: 'string', required: true, size: 255 },
-            { key: 'description', type: 'string', required: false, size: 1000 }
+            { key: 'tax_number', type: 'string', required: false, size: 255 },
+            { key: 'email', type: 'string', required: false, size: 255 },
+            { key: 'phone', type: 'string', required: false, size: 255 },
+            { key: 'currency', type: 'string', required: false, size: 10 },
+            { key: 'subscription_plan', type: 'string', required: false, size: 100 },
+            { key: 'subscription_status', type: 'string', required: false, size: 100 },
+            { key: 'subscription_end_date', type: 'datetime', required: false },
+            { key: 'max_users', type: 'integer', required: false },
+            { key: 'max_branches', type: 'integer', required: false },
+            { key: 'created_at', type: 'datetime', required: false },
+            { key: 'updated_at', type: 'datetime', required: false }
         ]
     },
     {
@@ -48,7 +50,41 @@ const schema = [
         attributes: [
             { key: 'business_id', type: 'string', required: true, size: 255 },
             { key: 'name', type: 'string', required: true, size: 255 },
-            { key: 'type', type: 'string', required: false, size: 255 }
+            { key: 'address', type: 'string', required: false, size: 1000 },
+            { key: 'phone', type: 'string', required: false, size: 255 },
+            { key: 'type', type: 'string', required: false, size: 255 },
+            { key: 'is_active', type: 'boolean', required: false },
+            { key: 'created_at', type: 'datetime', required: false },
+            { key: 'updated_at', type: 'datetime', required: false }
+        ]
+    },
+    {
+        name: 'profiles',
+        attributes: [
+            { key: 'first_name', type: 'string', required: false, size: 255 },
+            { key: 'last_name', type: 'string', required: false, size: 255 },
+            { key: 'phone', type: 'string', required: false, size: 255 },
+            { key: 'email', type: 'string', required: false, size: 255 },
+            { key: 'created_at', type: 'datetime', required: false },
+            { key: 'updated_at', type: 'datetime', required: false }
+        ]
+    },
+    {
+        name: 'roles',
+        attributes: [
+            { key: 'business_id', type: 'string', required: true, size: 255 },
+            { key: 'name', type: 'string', required: true, size: 255 },
+            { key: 'description', type: 'string', required: false, size: 1000 },
+            { key: 'created_at', type: 'datetime', required: false },
+            { key: 'updated_at', type: 'datetime', required: false }
+        ]
+    },
+    {
+        name: 'role_permissions',
+        attributes: [
+            { key: 'role_id', type: 'string', required: true, size: 255 },
+            { key: 'permissions', type: 'string', required: true, size: 3000 },
+            { key: 'created_at', type: 'datetime', required: false }
         ]
     },
     {
@@ -56,50 +92,51 @@ const schema = [
         attributes: [
             { key: 'business_id', type: 'string', required: true, size: 255 },
             { key: 'user_id', type: 'string', required: true, size: 255 },
-            { key: 'role_id', type: 'string', required: false, size: 255 }
+            { key: 'branch_id', type: 'string', required: false, size: 255 },
+            { key: 'role_id', type: 'string', required: false, size: 255 },
+            { key: 'is_active', type: 'boolean', required: false },
+            { key: 'created_at', type: 'datetime', required: false },
+            { key: 'updated_at', type: 'datetime', required: false }
         ]
     },
     {
         name: 'categories',
         attributes: [
             { key: 'business_id', type: 'string', required: true, size: 255 },
-            { key: 'name', type: 'string', required: true, size: 255 }
-        ]
-    },
-    {
-        name: 'subscriptions',
-        attributes: [
-            { key: 'business_id', type: 'string', required: true, size: 255 },
-            { key: 'plan_name', type: 'string', required: true, size: 255 },
-            { key: 'status', type: 'string', required: true, size: 255 },
+            { key: 'name', type: 'string', required: true, size: 255 },
+            { key: 'parent_id', type: 'string', required: false, size: 255 },
             { key: 'created_at', type: 'datetime', required: false }
         ]
     },
     {
-        name: 'profiles',
+        name: 'products',
         attributes: [
-            { key: 'first_name', type: 'string', required: false, size: 255 },
-            { key: 'last_name', type: 'string', required: false, size: 255 }
+            { key: 'business_id', type: 'string', required: true, size: 255 },
+            { key: 'category_id', type: 'string', required: false, size: 255 },
+            { key: 'name', type: 'string', required: true, size: 255 },
+            { key: 'description', type: 'string', required: false, size: 1000 },
+            { key: 'sku', type: 'string', required: false, size: 255 },
+            { key: 'barcode', type: 'string', required: false, size: 255 },
+            { key: 'retail_price', type: 'float', required: false },
+            { key: 'wholesale_price', type: 'float', required: false },
+            { key: 'cost_price', type: 'float', required: false },
+            { key: 'price', type: 'float', required: false },
+            { key: 'tax_class', type: 'string', required: false, size: 100 },
+            { key: 'tax_rate_id', type: 'string', required: false, size: 255 },
+            { key: 'is_active', type: 'boolean', required: false },
+            { key: 'created_at', type: 'datetime', required: false }
         ]
     },
     {
-        name: 'sales',
+        name: 'inventory',
         attributes: [
-            { key: 'total_amount', type: 'float', required: false },
-            { key: 'total_tax_amount', type: 'float', required: false },
-            { key: 'created_at', type: 'datetime', required: false },
-            { key: 'customerId', type: 'string', required: false, size: 255 },
             { key: 'business_id', type: 'string', required: false, size: 255 },
-            { key: 'branch_id', type: 'string', required: false, size: 255 }
-        ]
-    },
-    {
-        name: 'sale_items',
-        attributes: [
-            { key: 'sale_id', type: 'string', required: true, size: 255 },
+            { key: 'branch_id', type: 'string', required: true, size: 255 },
             { key: 'product_id', type: 'string', required: true, size: 255 },
-            { key: 'quantity', type: 'integer', required: true },
-            { key: 'price', type: 'float', required: true }
+            { key: 'quantity', type: 'float', required: true },
+            { key: 'reorder_level', type: 'float', required: false },
+            { key: 'created_at', type: 'datetime', required: false },
+            { key: 'updated_at', type: 'datetime', required: false }
         ]
     },
     {
@@ -109,40 +146,83 @@ const schema = [
             { key: 'name', type: 'string', required: true, size: 255 },
             { key: 'email', type: 'string', required: false, size: 255 },
             { key: 'phone', type: 'string', required: false, size: 255 },
+            { key: 'address', type: 'string', required: false, size: 1000 },
+            { key: 'vat_number', type: 'string', required: false, size: 255 },
+            { key: 'customer_type', type: 'string', required: false, size: 255 },
             { key: 'balance', type: 'float', required: false },
-            { key: 'credit_limit', type: 'float', required: false }
+            { key: 'credit_limit', type: 'float', required: false },
+            { key: 'created_at', type: 'datetime', required: false }
         ]
     },
     {
-        name: 'products',
+        name: 'suppliers',
         attributes: [
             { key: 'business_id', type: 'string', required: true, size: 255 },
             { key: 'name', type: 'string', required: true, size: 255 },
-            { key: 'category_id', type: 'string', required: false, size: 255 },
-            { key: 'price', type: 'float', required: true },
-            { key: 'cost_price', type: 'float', required: false },
-            { key: 'sku', type: 'string', required: false, size: 255 },
-            { key: 'barcode', type: 'string', required: false, size: 255 },
-            { key: 'is_active', type: 'boolean', required: false }
+            { key: 'contact_person', type: 'string', required: false, size: 255 },
+            { key: 'email', type: 'string', required: false, size: 255 },
+            { key: 'phone', type: 'string', required: false, size: 255 },
+            { key: 'address', type: 'string', required: false, size: 1000 },
+            { key: 'created_at', type: 'datetime', required: false }
+        ]
+    },
+    {
+        name: 'sales',
+        attributes: [
+            { key: 'business_id', type: 'string', required: false, size: 255 },
+            { key: 'branch_id', type: 'string', required: false, size: 255 },
+            { key: 'user_id', type: 'string', required: false, size: 255 },
+            { key: 'customer_id', type: 'string', required: false, size: 255 },
+            { key: 'customerId', type: 'string', required: false, size: 255 },
+            { key: 'customerName', type: 'string', required: false, size: 255 },
+            { key: 'receiptNumber', type: 'string', required: false, size: 255 },
+            { key: 'items', type: 'string', required: false, size: 3000 },
+            { key: 'payments', type: 'string', required: false, size: 3000 },
+            { key: 'subtotal', type: 'float', required: false },
+            { key: 'vat_total', type: 'float', required: false },
+            { key: 'vatTotal', type: 'float', required: false },
+            { key: 'discount_total', type: 'float', required: false },
+            { key: 'discountTotal', type: 'float', required: false },
+            { key: 'total', type: 'float', required: false },
+            { key: 'total_amount', type: 'float', required: false },
+            { key: 'total_tax_amount', type: 'float', required: false },
+            { key: 'payment_method', type: 'string', required: false, size: 255 },
+            { key: 'status', type: 'string', required: false, size: 255 },
+            { key: 'timestamp', type: 'string', required: false, size: 255 },
+            { key: 'created_at', type: 'datetime', required: false }
+        ]
+    },
+    {
+        name: 'sale_items',
+        attributes: [
+            { key: 'sale_id', type: 'string', required: true, size: 255 },
+            { key: 'product_id', type: 'string', required: true, size: 255 },
+            { key: 'quantity', type: 'integer', required: true },
+            { key: 'price', type: 'float', required: false },
+            { key: 'unit_price', type: 'float', required: false },
+            { key: 'line_total', type: 'float', required: false },
+            { key: 'vat_amount', type: 'float', required: false }
+        ]
+    },
+    {
+        name: 'expense_categories',
+        attributes: [
+            { key: 'business_id', type: 'string', required: false, size: 255 },
+            { key: 'name', type: 'string', required: true, size: 255 },
+            { key: 'description', type: 'string', required: false, size: 1000 },
+            { key: 'created_at', type: 'datetime', required: false }
         ]
     },
     {
         name: 'cash_drawer_logs',
         attributes: [
-            { key: 'business_id', type: 'string', required: true, size: 255 },
-            { key: 'branch_id', type: 'string', required: true, size: 255 },
+            { key: 'business_id', type: 'string', required: false, size: 255 },
+            { key: 'branch_id', type: 'string', required: false, size: 255 },
             { key: 'amount', type: 'float', required: true },
-            { key: 'type', type: 'string', required: true, size: 255 },
+            { key: 'type', type: 'string', required: false, size: 255 },
+            { key: 'transaction_type', type: 'string', required: false, size: 255 },
             { key: 'notes', type: 'string', required: false, size: 1000 },
             { key: 'created_at', type: 'datetime', required: false }
-        ]
-    },
-    {
-        name: 'inventory',
-        attributes: [
-            { key: 'product_id', type: 'string', required: true, size: 255 },
-            { key: 'branch_id', type: 'string', required: true, size: 255 },
-            { key: 'quantity', type: 'integer', required: true }
         ]
     },
     {
@@ -152,22 +232,6 @@ const schema = [
             { key: 'name', type: 'string', required: true, size: 255 },
             { key: 'rate', type: 'float', required: true },
             { key: 'is_active', type: 'boolean', required: false }
-        ]
-    },
-    {
-        name: 'expense_categories',
-        attributes: [
-            { key: 'business_id', type: 'string', required: true, size: 255 },
-            { key: 'name', type: 'string', required: true, size: 255 }
-        ]
-    },
-    {
-        name: 'suppliers',
-        attributes: [
-            { key: 'business_id', type: 'string', required: true, size: 255 },
-            { key: 'name', type: 'string', required: true, size: 255 },
-            { key: 'contact_email', type: 'string', required: false, size: 255 },
-            { key: 'contact_phone', type: 'string', required: false, size: 255 }
         ]
     },
     {
@@ -206,6 +270,17 @@ const schema = [
             { key: 'branch_id', type: 'string', required: true, size: 255 },
             { key: 'quantity', type: 'integer', required: true },
             { key: 'type', type: 'string', required: true, size: 255 },
+            { key: 'created_at', type: 'datetime', required: false }
+        ]
+    },
+    {
+        name: 'subscriptions',
+        attributes: [
+            { key: 'business_id', type: 'string', required: true, size: 255 },
+            { key: 'plan_name', type: 'string', required: true, size: 255 },
+            { key: 'status', type: 'string', required: true, size: 255 },
+            { key: 'start_date', type: 'datetime', required: false },
+            { key: 'end_date', type: 'datetime', required: false },
             { key: 'created_at', type: 'datetime', required: false }
         ]
     }

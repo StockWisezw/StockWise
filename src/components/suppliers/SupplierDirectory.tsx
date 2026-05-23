@@ -15,7 +15,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '../ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { supabase } from '../../lib/supabase';
+import { appwrite } from '../../lib/appwrite';
 import { toast } from 'sonner';
 
 export function SupplierDirectory() {
@@ -54,10 +54,10 @@ export function SupplierDirectory() {
       return;
     }
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await appwrite.auth.getUser();
       if (!userData?.user) throw new Error("Not authenticated");
 
-      const { data: businessData, error: businessError } = await supabase
+      const { data: businessData, error: businessError } = await appwrite
         .from('business_users')
         .select('business_id')
         .eq('user_id', userData.user.id)
@@ -69,7 +69,7 @@ export function SupplierDirectory() {
         return;
       }
 
-      const { data, error } = await supabase.from('suppliers').insert({
+      const { data, error } = await appwrite.from('suppliers').insert({
         business_id: businessData.business_id,
         name: newSupplierName,
         contact_name: newSupplierContact,
@@ -90,7 +90,7 @@ export function SupplierDirectory() {
   const fetchSuppliers = async () => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      const { data, error } = await appwrite
         .from('suppliers')
         .select('*')
         .order('name');
@@ -108,7 +108,7 @@ export function SupplierDirectory() {
   useEffect(() => {
     fetchSuppliers();
     
-    const channel = supabase
+    const channel = appwrite
       .channel('public:suppliers')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'suppliers' }, () => {
         fetchSuppliers();
@@ -116,7 +116,7 @@ export function SupplierDirectory() {
       .subscribe();
 
     return () => {
-      supabase.removeChannel(channel);
+      appwrite.removeChannel(channel);
     };
   }, []);
 

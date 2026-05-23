@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Label } from '../ui/label';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { appwrite } from '@/lib/appwrite';
 
 export function Stocktake() {
   const [stocktakes, setStocktakes] = useState<any[]>([]);
@@ -27,7 +27,7 @@ export function Stocktake() {
   const fetchStocktakes = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await appwrite
         .from('stocktakes_advanced')
         .select(`
           id,
@@ -60,7 +60,7 @@ export function Stocktake() {
   const handleApprove = async () => {
     if (!reviewItem) return;
     try {
-      const { error } = await supabase
+      const { error } = await appwrite
         .from('stocktakes_advanced')
         .update({ status: 'COMPLETED', completed_at: new Date().toISOString() })
         .eq('id', reviewItem.id);
@@ -77,7 +77,7 @@ export function Stocktake() {
   const handleReject = async () => {
     if (!reviewItem) return;
     try {
-      const { error } = await supabase
+      const { error } = await appwrite
         .from('stocktakes_advanced')
         .update({ status: 'IN_PROGRESS' })
         .eq('id', reviewItem.id);
@@ -95,7 +95,7 @@ export function Stocktake() {
     e.preventDefault();
     const formData = new FormData(e.target as HTMLFormElement);
     try {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await appwrite.auth.getUser();
       const insertData = {
         status: 'IN_PROGRESS',
         type: formData.get('type') as string,
@@ -104,7 +104,7 @@ export function Stocktake() {
         started_at: new Date().toISOString()
       };
       
-      const { error } = await supabase
+      const { error } = await appwrite
         .from('stocktakes_advanced')
         .insert(insertData);
         

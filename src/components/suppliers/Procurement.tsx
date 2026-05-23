@@ -12,7 +12,7 @@ import {
   TableBody,
   TableCell,
 } from '../ui/table';
-import { supabase } from '@/lib/supabase';
+import { appwrite } from '@/lib/appwrite';
 import { toast } from 'sonner';
 
 export function Procurement() {
@@ -27,7 +27,7 @@ export function Procurement() {
   const fetchPOs = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await appwrite
         .from('purchase_orders')
         .select(`
           id,

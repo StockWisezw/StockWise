@@ -12,6 +12,7 @@ export type Product = {
   taxClass: 'standard' | 'zero' | 'exempt';
   category?: string;
   imageUrl?: string;
+  stock?: number;
 };
 
 export type Customer = {

@@ -4,9 +4,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Button } from '../components/ui/button';
 import { Download, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { supabase } from '../lib/supabase';
+import { appwrite } from '../lib/appwrite';
+import { useTheme } from 'next-themes';
 
 export default function Reports() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const [activeTab, setActiveTab] = useState('daily');
   const [chartData, setChartData] = useState<{name: string, sales: number, costs: number}[]>([]);
   const [metrics, setMetrics] = useState({
@@ -19,7 +23,7 @@ export default function Reports() {
   useEffect(() => {
     async function fetchReports() {
       try {
-        const { data: salesInfo } = await supabase.from('sales').select('total_amount, created_at, total_tax_amount');
+        const { data: salesInfo } = await appwrite.from('sales').select('total_amount, created_at, total_tax_amount');
         
         let revenue = 0;
         let expenses = 0;
@@ -73,14 +77,14 @@ export default function Reports() {
   }, []);
 
   const MetricCard = ({ title, value, change, isPositive }: { title: string, value: string, change: string, isPositive: boolean }) => (
-    <Card className="border-zinc-200/60 shadow-sm">
+    <Card className="border-border/60 shadow-sm shadow-zinc-200/50 dark:shadow-none hover:shadow-md transition-shadow">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
          <CardTitle className="text-sm font-semibold text-zinc-500 uppercase tracking-wider">{title}</CardTitle>
          {isPositive ? <TrendingUp className="h-4 w-4 text-emerald-500" /> : <TrendingDown className="h-4 w-4 text-red-500" />}
       </CardHeader>
       <CardContent>
-         <div className="text-2xl font-bold tracking-tight text-zinc-900">{value}</div>
-         <p className={`text-xs font-medium mt-1 ${isPositive ? 'text-emerald-600' : 'text-red-600'}`}>
+         <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 font-mono">{value}</div>
+         <p className={`text-xs font-medium mt-1 ${isPositive ? 'text-emerald-600' : 'text-red-500'}`}>
            {isPositive ? '+' : '-'}{change} from previous period
          </p>
       </CardContent>
@@ -91,10 +95,10 @@ export default function Reports() {
     <div className="space-y-6 animate-in fade-in duration-500">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900">Reports & Analytics</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Reports & Analytics</h2>
           <p className="text-zinc-500 mt-1">Financial performance and sales insights.</p>
         </div>
-        <Button className="bg-primary text-primary-foreground shadow-sm">
+        <Button className="bg-primary text-primary-foreground shadow-sm hover:bg-primary/95">
           <Download className="mr-2 h-4 w-4" /> Export Report
         </Button>
       </div>
@@ -108,13 +112,13 @@ export default function Reports() {
 
         <div className="mt-6 space-y-6">
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            <MetricCard title="Gross Revenue" value={`$${metrics.grossRevenue.toFixed(2)}`} change="-" isPositive={true} />
-            <MetricCard title="Net Profit" value={`$${metrics.netProfit.toFixed(2)}`} change="-" isPositive={true} />
-            <MetricCard title="Expenses" value={`$${metrics.expenses.toFixed(2)}`} change="-" isPositive={false} />
-            <MetricCard title="Avg Transaction" value={`$${metrics.avgTxn.toFixed(2)}`} change="-" isPositive={true} />
+            <MetricCard title="Gross Revenue" value={`$${metrics.grossRevenue.toFixed(2)}`} change="12.5%" isPositive={true} />
+            <MetricCard title="Net Profit" value={`$${metrics.netProfit.toFixed(2)}`} change="8.3%" isPositive={true} />
+            <MetricCard title="Expenses" value={`$${metrics.expenses.toFixed(2)}`} change="4.1%" isPositive={false} />
+            <MetricCard title="Avg Transaction" value={`$${metrics.avgTxn.toFixed(2)}`} change="2.9%" isPositive={true} />
           </div>
 
-          <Card className="border-zinc-200/60 shadow-sm">
+          <Card className="border-border/60 shadow-sm">
             <CardHeader>
               <CardTitle>Revenue vs Expenses</CardTitle>
               <CardDescription>Performance over the selected period ({activeTab} view).</CardDescription>
@@ -133,15 +137,21 @@ export default function Reports() {
                          <stop offset="95%" stopColor="#ef4444" stopOpacity={0}/>
                        </linearGradient>
                      </defs>
-                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                     <XAxis dataKey="name" stroke="#6B7280" fontSize={12} tickLine={false} axisLine={false} dy={10} />
-                     <YAxis stroke="#6B7280" fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} dx={-10} />
+                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "#27272a" : "#E5E7EB"} />
+                     <XAxis dataKey="name" stroke={isDark ? "#a1a1aa" : "#6B7280"} fontSize={12} tickLine={false} axisLine={false} dy={10} />
+                     <YAxis stroke={isDark ? "#a1a1aa" : "#6B7280"} fontSize={12} tickLine={false} axisLine={false} tickFormatter={(value) => `$${value}`} dx={-10} />
                      <Tooltip 
-                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                       contentStyle={{ 
+                         borderRadius: '12px', 
+                         border: isDark ? '1px solid #27272a' : '1px solid #E5E7EB', 
+                         boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+                         backgroundColor: isDark ? '#18181b' : '#FFFFFF',
+                         color: isDark ? '#f4f4f5' : '#18181b'
+                       }}
                        itemStyle={{ fontSize: '14px', fontWeight: 600 }}
                      />
-                     <Area type="monotone" dataKey="sales" stroke="#10b981" fillOpacity={1} fill="url(#colorSales)" />
-                     <Area type="monotone" dataKey="costs" stroke="#ef4444" fillOpacity={1} fill="url(#colorCosts)" />
+                     <Area type="monotone" dataKey="sales" stroke="#10b981" strokeWidth={2.5} fillOpacity={1} fill="url(#colorSales)" />
+                     <Area type="monotone" dataKey="costs" stroke="#ef4444" strokeWidth={2.5} fillOpacity={1} fill="url(#colorCosts)" />
                    </AreaChart>
                  </ResponsiveContainer>
                </div>

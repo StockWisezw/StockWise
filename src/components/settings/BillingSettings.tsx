@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Check, AlertTriangle, CreditCard, ChevronRight, Download, HelpCircle } from 'lucide-react';
 import { Table, TableHead, TableHeader, TableRow, TableCell, TableBody } from '../ui/table';
-import { supabase } from '../../lib/supabase';
+import { appwrite } from '../../lib/appwrite';
 import { toast } from 'sonner';
 
 export function BillingSettings() {
@@ -14,19 +14,19 @@ export function BillingSettings() {
   
   useEffect(() => {
     async function loadData() {
-      const { data: userData } = await supabase.auth.getUser();
+      const { data: userData } = await appwrite.auth.getUser();
       if (!userData?.user) return;
       
-      const { data: buData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
+      const { data: buData } = await appwrite.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
       if (!buData) return;
 
-      const { data: business } = await supabase.from('businesses').select('*').eq('id', buData.business_id).single();
+      const { data: business } = await appwrite.from('businesses').select('*').eq('id', buData.business_id).single();
       if (business) {
          setBusinessData(business);
-         const { data: sub } = await supabase.from('subscriptions').select('*').eq('business_id', business.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
+         const { data: sub } = await appwrite.from('subscriptions').select('*').eq('business_id', business.id).order('created_at', { ascending: false }).limit(1).maybeSingle();
          if (sub) setSubscription(sub);
 
-         const { data: bUsers } = await supabase.from('business_users').select('id').eq('business_id', business.id);
+         const { data: bUsers } = await appwrite.from('business_users').select('id').eq('business_id', business.id);
          setUserCount(bUsers?.length || 1);
       }
     }

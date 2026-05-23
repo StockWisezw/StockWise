@@ -29,6 +29,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { AIAssistant } from './AIAssistant';
 import { SyncManager } from './pos/SyncManager';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
+import { TarezaLogo } from './ui/Logo';
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -194,13 +195,8 @@ export default function Layout() {
         
         {/* Desktop Sidebar */}
         <aside className="hidden md:flex w-[260px] flex-col bg-zinc-50 dark:bg-[#18181b] border-r border-zinc-200 dark:border-zinc-800/80 overflow-hidden shrink-0">
-          <div className="h-16 px-6 flex items-center space-x-3">
-            <div className="bg-blue-600 p-1.5 rounded shadow-sm">
-              <Store className="h-4 w-4 text-white" />
-            </div>
-            <div className="flex flex-col">
-              <span className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 leading-none">TAREZA</span>
-            </div>
+          <div className="h-16 px-5 flex items-center">
+            <TarezaLogo size="sm" showSubtitle={false} />
           </div>
           <div className="flex-1 overflow-auto py-4">
             <NavLinks />
@@ -229,11 +225,8 @@ export default function Layout() {
                   <Menu className="h-5 w-5" />
                 </SheetTrigger>
                 <SheetContent side="left" className="w-[260px] p-0 bg-zinc-50 dark:bg-[#18181b]">
-                  <div className="h-16 px-6 flex items-center space-x-3 border-b border-zinc-200 dark:border-zinc-800/80">
-                    <div className="bg-blue-600 p-1.5 rounded shadow-sm">
-                      <Store className="h-4 w-4 text-white" />
-                    </div>
-                    <span className="text-lg font-semibold tracking-tight text-zinc-900 dark:text-zinc-100">TAREZA</span>
+                  <div className="h-16 px-5 flex items-center border-b border-zinc-200 dark:border-zinc-800/80">
+                    <TarezaLogo size="sm" showSubtitle={false} />
                   </div>
                   <div className="py-4">
                     <NavLinks mobile />

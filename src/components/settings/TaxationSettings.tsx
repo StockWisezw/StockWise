@@ -8,7 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../ui/badge';
 import { Plus, Calculator, Edit2, Percent, ListPlus, Receipt, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '@/lib/supabase';
+import { appwrite } from '@/lib/appwrite';
 
 export function TaxationSettings() {
   const [isAdding, setIsAdding] = useState(false);
@@ -33,7 +33,7 @@ export function TaxationSettings() {
   const fetchTaxRates = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error } = await appwrite
         .from('tax_rates')
         .select('*')
         .order('name');
@@ -64,7 +64,7 @@ export function TaxationSettings() {
   const fetchExpenseCategories = async () => {
     try {
       setExpensesLoading(true);
-      const { data } = await supabase.from('expense_categories').select('*').order('name', { ascending: true });
+      const { data } = await appwrite.from('expense_categories').select('*').order('name', { ascending: true });
       let categories = data || [];
 
       if (categories.length === 0) {
@@ -77,12 +77,12 @@ export function TaxationSettings() {
           { name: 'Office Supplies', description: 'Stationery, consumables' },
         ];
         
-        await Promise.all(defaults.map(cat => supabase.from('expense_categories').insert([{
+        await Promise.all(defaults.map(cat => appwrite.from('expense_categories').insert([{
             ...cat,
             created_at: new Date().toISOString()
         }])));
         
-        const { data: snap2 } = await supabase.from('expense_categories').select('*').order('name', { ascending: true });
+        const { data: snap2 } = await appwrite.from('expense_categories').select('*').order('name', { ascending: true });
         categories = snap2 || [];
       }
       setExpenseCategories(categories);
@@ -100,7 +100,7 @@ export function TaxationSettings() {
     if (!newExpenseName.trim()) return;
     try {
       setIsAddingExpense(true);
-      await supabase.from('expense_categories').insert([{
+      await appwrite.from('expense_categories').insert([{
         name: newExpenseName,
         description: newExpenseDesc,
         created_at: new Date().toISOString()
@@ -118,7 +118,7 @@ export function TaxationSettings() {
 
   const handleDeleteExpense = async (id: string) => {
     try {
-      await supabase.from('expense_categories').delete().eq('id', id);
+      await appwrite.from('expense_categories').delete().eq('id', id);
       toast.success('Category removed');
       fetchExpenseCategories();
     } catch (err) {

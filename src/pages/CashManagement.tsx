@@ -6,7 +6,7 @@ import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { Lock, Unlock, DollarSign, Calculator, FileText, AlertTriangle, ArrowUpRight, ArrowDownRight, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../lib/supabase';
+import { appwrite } from '../lib/appwrite';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 
 interface CashLog {
@@ -46,7 +46,7 @@ export default function CashManagement() {
       const isoStartOfDay = startOfDay.toISOString();
 
       // 1. Fetch sales
-      const { data: salesData } = await supabase.from('sales')
+      const { data: salesData } = await appwrite.from('sales')
         .select('*')
         .eq('status', 'completed')
         .gte('created_at', isoStartOfDay);
@@ -54,7 +54,7 @@ export default function CashManagement() {
       const totalCashSales = salesData?.filter(s => s.payment_method === 'cash').reduce((sum, sale) => sum + Number(sale.total), 0) || 0;
       
       // 2. Fetch cash logs
-      const { data: logsDocs } = await supabase.from('cash_drawer_logs')
+      const { data: logsDocs } = await appwrite.from('cash_drawer_logs')
         .select('*')
         .gte('created_at', isoStartOfDay)
         .order('created_at', { ascending: false });
@@ -115,7 +115,7 @@ export default function CashManagement() {
     }
     
     try {
-        await supabase.from('cash_drawer_logs').insert([{
+        await appwrite.from('cash_drawer_logs').insert([{
             amount: parseFloat(entryAmount),
             transaction_type: entryType,
             notes: entryNotes,
@@ -147,7 +147,7 @@ export default function CashManagement() {
     }
 
     try {
-        await supabase.from('cash_drawer_logs').insert([{
+        await appwrite.from('cash_drawer_logs').insert([{
             amount: countedCash,
             transaction_type: 'closing_count',
             notes: `Counted: $${countedCash.toFixed(2)}, Expected: $${expectedCash.toFixed(2)}, Variance: $${variance.toFixed(2)}. ${notes}`,
@@ -169,7 +169,7 @@ export default function CashManagement() {
     try {
         const floatAmount = parseFloat(startingFloat) || 0;
         
-        await supabase.from('cash_drawer_logs').insert([{
+        await appwrite.from('cash_drawer_logs').insert([{
             amount: floatAmount,
             transaction_type: 'opening_float',
             notes: 'Register opened',
@@ -214,7 +214,7 @@ export default function CashManagement() {
     <div className="space-y-6 animate-in fade-in duration-500 max-w-5xl mx-auto pb-10">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-zinc-900">Cash Management</h2>
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">Cash Management</h2>
           <p className="text-zinc-500 mt-1">Manage shift registers, till drops, and cash movements.</p>
         </div>
         <Badge variant="outline" className={`px-3 py-1 ${isDrawerOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
@@ -259,7 +259,7 @@ export default function CashManagement() {
                   <CardContent className="space-y-6">
                      <div className="bg-zinc-50 p-4 rounded-lg flex justify-between items-center border">
                         <span className="font-semibold text-zinc-700">Expected Cash in Drawer</span>
-                        <span className="text-xl font-bold font-mono text-zinc-900">${expectedCash.toFixed(2)}</span>
+                        <span className="text-xl font-bold font-mono text-zinc-900 dark:text-zinc-50">${expectedCash.toFixed(2)}</span>
                      </div>
         
                      <div className="space-y-2">
@@ -387,7 +387,7 @@ export default function CashManagement() {
                                     {getLogIcon(log.transaction_type)}
                                   </div>
                                   <div>
-                                    <p className="text-sm font-semibold text-zinc-900">{formatLogType(log.transaction_type)}</p>
+                                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">{formatLogType(log.transaction_type)}</p>
                                     <p className="text-xs text-zinc-500">{new Date(log.created_at).toLocaleTimeString()} {log.notes && `• ${log.notes}`}</p>
                                   </div>
                                </div>

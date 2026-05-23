@@ -2,10 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Activity, CreditCard, DollarSign, Package, Sparkles } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useEffect, useState } from 'react';
-import { supabase } from '../lib/supabase';
+import { appwrite } from '../lib/appwrite';
 import { toast } from 'sonner';
+import { useTheme } from 'next-themes';
 
 export default function Dashboard() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === 'dark';
+
   const [loading, setLoading] = useState(true);
   const [aiInsight, setAiInsight] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(true);
@@ -16,9 +20,9 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const { data: salesInfo } = await supabase.from('sales').select('total_amount, created_at');
-        const { count: branchesCount } = await supabase.from('branches').select('*', { count: 'exact', head: true });
-        const { count: lowStockCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true);
+        const { data: salesInfo } = await appwrite.from('sales').select('total_amount, created_at');
+        const { count: branchesCount } = await appwrite.from('branches').select('*', { count: 'exact', head: true });
+        const { count: lowStockCount } = await appwrite.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true);
         // Note: lowStock should actually be based on quantity, but we'll leave it as a placeholder.
         
         let realSales = 0;
@@ -87,20 +91,20 @@ export default function Dashboard() {
   useEffect(() => {
     async function ensureBusinessProfile() {
       try {
-        const { data: userData, error: userError } = await supabase.auth.getUser();
+        const { data: userData, error: userError } = await appwrite.auth.getUser();
         if (userError || !userData?.user) {
           setLoading(false);
           return;
         }
 
-        const { data: businessData, error: businessError } = await supabase
+        const { data: businessData, error: businessError } = await appwrite
           .from('business_users')
           .select('business_id')
           .eq('user_id', userData.user.id)
           .limit(1)
           .maybeSingle();
 
-        const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', userData.user.id).limit(1).maybeSingle();
+        const { data: profile } = await appwrite.from('profiles').select('first_name').eq('id', userData.user.id).limit(1).maybeSingle();
         if (profile?.first_name) {
           setProfileName(profile.first_name);
         }
@@ -110,7 +114,7 @@ export default function Dashboard() {
           
           // Check if profile exists
           try {
-            await supabase.from('profiles').upsert({ 
+            await appwrite.from('profiles').upsert({ 
               id: userData.user.id, 
               first_name: 'Default', 
               last_name: 'User',
@@ -120,19 +124,19 @@ export default function Dashboard() {
           } catch(e) {}
           
           // Create business
-          const { data: bData, error: bErr } = await supabase.from('businesses').insert({ name: 'My Business' }).select().single();
+          const { data: bData, error: bErr } = await appwrite.from('businesses').insert({ name: 'My Business' }).select().single();
           if (bErr || !bData) throw bErr || new Error("Failed to create business");
           
           // Create role
-          const { data: rData, error: rErr } = await supabase.from('roles').insert({ business_id: bData.id, name: 'Admin', description: 'System Administrator' }).select().single();
+          const { data: rData, error: rErr } = await appwrite.from('roles').insert({ business_id: bData.id, name: 'Admin', description: 'System Administrator' }).select().single();
           if (rErr || !rData) throw rErr || new Error("Failed to create role");
 
           // Create branch
-          const { data: brData, error: brErr } = await supabase.from('branches').insert({ business_id: bData.id, name: 'Main Branch', type: 'retail' }).select().single();
+          const { data: brData, error: brErr } = await appwrite.from('branches').insert({ business_id: bData.id, name: 'Main Branch', type: 'retail' }).select().single();
           if (brErr || !brData) throw brErr || new Error("Failed to create branch");
 
           // Link user
-          const { error: buErr } = await supabase.from('business_users').insert({
+          const { error: buErr } = await appwrite.from('business_users').insert({
             business_id: bData.id,
             user_id: userData.user.id,
             branch_id: brData.id,
@@ -141,10 +145,10 @@ export default function Dashboard() {
           if (buErr) throw buErr;
 
           // Default category
-          await supabase.from('categories').insert({ business_id: bData.id, name: 'General' });
+          await appwrite.from('categories').insert({ business_id: bData.id, name: 'General' });
 
           // Free trial sub
-          await supabase.from('subscriptions').insert({ business_id: bData.id, plan_name: 'free_trial', status: 'active' });
+          await appwrite.from('subscriptions').insert({ business_id: bData.id, plan_name: 'free_trial', status: 'active' });
           
           toast.success('Your business profile has been initialized.');
         }
@@ -166,7 +170,7 @@ export default function Dashboard() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-secondary flex flex-col sm:flex-row sm:items-end gap-2">
+          <h2 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50 flex flex-col sm:flex-row sm:items-end gap-2">
             <span>Welcome back{profileName ? `, ${profileName}` : ''}!</span>
           </h2>
           <p className="text-zinc-500 font-medium mt-1">
@@ -176,7 +180,7 @@ export default function Dashboard() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card className="border-border/60 shadow-sm shadow-zinc-200/50 hover:shadow-md transition-shadow">
+        <Card className="border-border/60 shadow-sm shadow-zinc-200/50 dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold tracking-wide uppercase text-zinc-500">Total Sales (ZWG)</CardTitle>
             <div className="p-2 bg-primary/10 rounded-md">
@@ -184,61 +188,61 @@ export default function Dashboard() {
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">
+            <div className="text-3xl font-bold font-mono tracking-tight text-zinc-900 dark:text-zinc-50">
                {stats.totalSales.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </div>
-            <p className="text-sm text-zinc-400 mt-2 flex items-center font-medium">
+            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-2 flex items-center font-medium">
                +14.5% from last month
             </p>
           </CardContent>
         </Card>
         
-        <Card className="border-border/60 shadow-sm shadow-zinc-200/50 hover:shadow-md transition-shadow">
+        <Card className="border-border/60 shadow-sm shadow-zinc-200/50 dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold tracking-wide uppercase text-zinc-500">Transactions</CardTitle>
-            <div className="p-2 bg-zinc-100 rounded-md">
-              <CreditCard className="h-4 w-4 text-secondary" />
+            <div className="p-2 bg-zinc-100 dark:bg-zinc-800 rounded-md animate-pulse">
+              <CreditCard className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">
+            <div className="text-3xl font-bold font-mono tracking-tight text-zinc-900 dark:text-zinc-50">
                {stats.transactions}
             </div>
-            <p className="text-sm text-zinc-400 mt-2 flex items-center font-medium">
+            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-2 flex items-center font-medium">
                Active processing
             </p>
           </CardContent>
         </Card>
         
-        <Card className="border-border/60 shadow-sm shadow-zinc-200/50 hover:shadow-md transition-shadow">
+        <Card className="border-border/60 shadow-sm shadow-zinc-200/50 dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold tracking-wide uppercase text-zinc-500">Low Stock Alerts</CardTitle>
-            <div className="p-2 bg-red-50 rounded-md">
+            <div className="p-2 bg-red-50 dark:bg-red-950/25 rounded-md">
               <Package className="h-4 w-4 text-red-500" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">
+            <div className="text-3xl font-bold font-mono tracking-tight text-zinc-900 dark:text-zinc-50">
                {stats.lowStock}
             </div>
-            <p className="text-sm text-zinc-400 mt-2 flex items-center font-medium">
+            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-2 flex items-center font-medium">
                {stats.lowStock === 0 ? 'All items in stock' : 'Items require reordering'}
             </p>
           </CardContent>
         </Card>
         
-        <Card className="border-border/60 shadow-sm shadow-zinc-200/50 hover:shadow-md transition-shadow">
+        <Card className="border-border/60 shadow-sm shadow-zinc-200/50 dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-semibold tracking-wide uppercase text-zinc-500">Active Branches</CardTitle>
-            <div className="p-2 bg-secondary/5 rounded-md">
-              <Activity className="h-4 w-4 text-secondary" />
+            <div className="p-2 bg-purple-50 dark:bg-purple-950/25 rounded-md">
+              <Activity className="h-4 w-4 text-primary" />
             </div>
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold font-mono tracking-tight text-secondary">
+            <div className="text-3xl font-bold font-mono tracking-tight text-zinc-900 dark:text-zinc-50">
                {stats.activeBranches}
             </div>
-            <p className="text-sm text-zinc-400 mt-2 font-medium">
+            <p className="text-sm text-zinc-400 dark:text-zinc-500 mt-2 font-medium">
                Currently syncing
             </p>
           </CardContent>
@@ -257,14 +261,14 @@ export default function Dashboard() {
                 <AreaChart data={chartData}>
                   <defs>
                     <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#F0B323" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#F0B323" stopOpacity={0}/>
+                      <stop offset="5%" stopColor={isDark ? "#a855f7" : "#7c3aed"} stopOpacity={0.3}/>
+                      <stop offset="95%" stopColor={isDark ? "#a855f7" : "#7c3aed"} stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke={isDark ? "#27272a" : "#E5E7EB"} />
                   <XAxis 
                     dataKey="name" 
-                    stroke="#6B7280"
+                    stroke={isDark ? "#a1a1aa" : "#6B7280"}
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
@@ -272,7 +276,7 @@ export default function Dashboard() {
                     dy={10}
                   />
                   <YAxis
-                    stroke="#6B7280"
+                    stroke={isDark ? "#a1a1aa" : "#6B7280"}
                     fontSize={12}
                     tickLine={false}
                     axisLine={false}
@@ -283,13 +287,19 @@ export default function Dashboard() {
                   <Tooltip 
                     contentStyle={{
                       borderRadius: '12px', 
-                      border: '1px solid #E5E7EB', 
+                      border: isDark ? '1px solid #27272a' : '1px solid #E5E7EB', 
                       boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)',
-                      backgroundColor: '#FFFFFF'
+                      backgroundColor: isDark ? '#18181b' : '#FFFFFF',
+                      color: isDark ? '#f4f4f5' : '#18181b'
                     }}
-                    itemStyle={{fontFamily: 'JetBrains Mono', fontSize: '14px', fontWeight: 700, color: '#0D1B2A'}}
+                    itemStyle={{
+                      fontFamily: 'JetBrains Mono', 
+                      fontSize: '14px', 
+                      fontWeight: 700, 
+                      color: isDark ? '#c084fc' : '#7c3aed'
+                    }}
                   />
-                  <Area type="monotone" dataKey="sales" stroke="#F0B323" strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
+                  <Area type="monotone" dataKey="sales" stroke={isDark ? "#c084fc" : "#7c3aed"} strokeWidth={3} fillOpacity={1} fill="url(#colorSales)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>

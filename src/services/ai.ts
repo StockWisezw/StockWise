@@ -1,5 +1,5 @@
 // AI services file connecting to Supabase Edge Functions
-import { supabase } from '../lib/supabase';
+import { appwrite } from '../lib/appwrite';
 
 // AI Insights for Inventory
 export const generateInventoryInsights = async (inventoryData: any) => {

@@ -33,8 +33,10 @@ jobs:
       run: npm run build
       env:
         # Dummy values for build process
-        VITE_SUPABASE_URL: "https://example.supabase.co"
-        VITE_SUPABASE_ANON_KEY: "dummy-key"
+        VITE_APPWRITE_ENDPOINT: "https://cloud.appwrite.io/v1"
+        VITE_APPWRITE_PROJECT_ID: "dummy-id"
+        VITE_APPWRITE_DATABASE_ID: "dummy-db"
+        VITE_APPWRITE_BUCKET_ID: "dummy-bucket"
 
   # Netlify usually handles deployment automatically when connected to a GitHub repo.
   # If you prefer manual deployment via GitHub Actions, configure the Netlify CLI steps here.

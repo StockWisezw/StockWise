@@ -15,6 +15,14 @@ import { useNavigate } from 'react-router-dom';
 import { usePOSStore, Product, SaleRecord, Customer } from '../store/posStore';
 import { PaymentDialog } from '../components/pos/PaymentDialog';
 import { ReceiptPrint } from '../components/pos/ReceiptPrint';
+import { 
+  getProducts as getLocalProducts, 
+  saveProducts as saveLocalProducts,
+  getCategories as getLocalCategories,
+  saveCategories as saveLocalCategories,
+  getCustomers as getLocalCustomers,
+  saveCustomers as saveLocalCustomers
+} from '../lib/indexedDb';
 
 export default function POS() {
   const navigate = useNavigate();
@@ -48,14 +56,35 @@ export default function POS() {
   const receiptRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch products and customers from Supabase
+  // Fetch products and customers from Appwrite with IndexedDB offline-first logic
   useEffect(() => {
     let unsubscribeProducts: any = null;
     
     const loadData = async () => {
       try {
         setIsLoading(true);
-        const { supabase } = await import('../lib/supabase');
+
+        // 1. Load instantly from local IndexedDB if cache exists
+        const cachedProducts = await getLocalProducts();
+        const cachedCustomers = await getLocalCustomers();
+        const cachedCats = await getLocalCategories();
+
+        if (cachedProducts.length > 0) {
+          setProducts(cachedProducts);
+          setIsLoading(false); // Enable immediate UI rendering!
+        }
+        if (cachedCustomers.length > 0) {
+          setCustomers(cachedCustomers);
+        }
+        if (cachedCats.length > 0) {
+          setCategories([
+            { id: 'all', name: 'All Menu', icon: <Package className="w-5 h-5" /> },
+            ...cachedCats.map(c => ({ id: c.id, name: c.name, icon: <Tag className="w-5 h-5" /> }))
+          ]);
+        }
+
+        // 2. Refresh from Server
+        const { appwrite } = await import('../lib/appwrite');
         
         let productsData: any[] = [];
         let customersData: any[] = [];
@@ -63,14 +92,17 @@ export default function POS() {
         
         try {
           const [custRes, catRes] = await Promise.all([
-            supabase.from('customers').select('*'),
-            supabase.from('categories').select('*')
+            appwrite.from('customers').select('*'),
+            appwrite.from('categories').select('*')
           ]);
           
           customersData = custRes.data || [];
           catData = catRes.data || [];
           
           if (catData.length > 0) {
+            const formattedCats = catData.map(c => ({ id: c.id, name: c.name }));
+            await saveLocalCategories(formattedCats);
+
             setCategories([
               { id: 'all', name: 'All Menu', icon: <Package className="w-5 h-5" /> },
               ...catData.map(c => ({ id: c.id, name: c.name, icon: <Tag className="w-5 h-5" /> }))
@@ -78,56 +110,90 @@ export default function POS() {
           }
           
           // Setup realtime subscription for products
-          const channel = supabase.channel('public:products')
+          const channel = appwrite.channel('public:products')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, payload => {
-               supabase.from('products').select('*').then(({ data }) => {
-                 if (data && data.length > 0) {
-                    setProducts(data.map(p => ({
-                      id: p.id,
-                      name: p.name || 'Unnamed',
-                      barcode: p.barcode || '',
-                      sku: p.sku || '',
-                      retailPrice: p.retail_price || p.retailPrice || 0,
-                      wholesalePrice: p.wholesale_price || p.wholesalePrice || 0,
-                      taxClass: p.tax_class || p.taxClass || 'standard',
-                      category: p.category_id || p.category || 'all',
-                      imageUrl: '', 
-                    })));
-                 } else {
-                   setProducts([]);
-                 }
+               Promise.all([
+                 appwrite.from('products').select('*'),
+                 Promise.resolve(appwrite.from('inventory').select('*')).catch(() => ({ data: [] }))
+               ]).then(([pRes, iRes]) => {
+                  const data = pRes.data || [];
+                  const invData = iRes.data || [];
+                  if (data && data.length > 0) {
+                     const updatedProducts = data.map(p => {
+                       const productInventory = invData.filter((i: any) => i.product_id === p.id);
+                       const totalStock = productInventory.reduce((acc: number, cur: any) => acc + (cur.quantity || 0), 0);
+                       return {
+                         id: p.id,
+                         name: p.name || 'Unnamed',
+                         barcode: p.barcode || '',
+                         sku: p.sku || '',
+                         retailPrice: p.retail_price || p.retailPrice || 0,
+                         wholesalePrice: p.wholesale_price || p.wholesalePrice || 0,
+                         taxClass: p.tax_class || p.taxClass || 'standard',
+                         category: p.category_id || p.category || 'all',
+                         imageUrl: '', 
+                         stock: totalStock
+                       };
+                     });
+                     setProducts(updatedProducts);
+                     saveLocalProducts(updatedProducts);
+                  } else {
+                    setProducts([]);
+                    saveLocalProducts([]);
+                  }
                });
             })
             .subscribe();
             
           unsubscribeProducts = () => {
-            supabase.removeChannel(channel);
+            appwrite.removeChannel(channel);
           };
 
-          // Initial load
-          const { data: initProducts } = await supabase.from('products').select('*');
+          // Initial load from Appwrite / local storage resolution
+          const [productsRes, inventoryRes] = await Promise.all([
+             appwrite.from('products').select('*'),
+             Promise.resolve(appwrite.from('inventory').select('*')).catch(() => ({ data: [] }))
+          ]);
+          
+          const initProducts = productsRes.data || [];
+          const initInventory = inventoryRes.data || [];
+          
           if (initProducts && initProducts.length > 0) {
-            setProducts(initProducts.map(p => ({
-              id: p.id,
-              name: p.name || 'Unnamed',
-              barcode: p.barcode || '',
-              sku: p.sku || '',
-              retailPrice: p.retail_price || p.retailPrice || 0,
-              wholesalePrice: p.wholesale_price || p.wholesalePrice || 0,
-              taxClass: p.tax_class || p.taxClass || 'standard',
-              category: p.category_id || p.category || 'all',
-              imageUrl: '', 
-            })));
+            const processedProducts = initProducts.map(p => {
+              const productInventory = initInventory.filter((i: any) => i.product_id === p.id);
+              const totalStock = productInventory.reduce((acc: number, cur: any) => acc + (cur.quantity || 0), 0);
+              
+              return {
+                id: p.id,
+                name: p.name || 'Unnamed',
+                barcode: p.barcode || '',
+                sku: p.sku || '',
+                retailPrice: p.retail_price || p.retailPrice || 0,
+                wholesalePrice: p.wholesale_price || p.wholesalePrice || 0,
+                taxClass: p.tax_class || p.taxClass || 'standard',
+                category: p.category_id || p.category || 'all',
+                imageUrl: '', 
+                stock: totalStock
+              };
+            });
+            setProducts(processedProducts);
+            await saveLocalProducts(processedProducts);
           } else {
              setProducts([]);
+             await saveLocalProducts([]);
           }
           
         } catch (e) {
-          console.error("Supabase fetch failed", e);
+          console.warn("Offline or network issue. Relying entirely on locally cached indexedDB data.", e);
+          if (cachedProducts.length > 0) {
+            toast.info("Operating offline mode with locally cached product catalog.", { duration: 4000 });
+          } else {
+            toast.error("Offline. No locally cached catalog found.");
+          }
         }
 
         if (customersData.length > 0) {
-          setCustomers(customersData.map(c => ({
+          const processedCustomers = customersData.map(c => ({
             id: c.id,
             name: c.name || 'Unnamed',
             phone: c.phone || '',
@@ -135,7 +201,12 @@ export default function POS() {
             address: c.address || '',
             balance: c.balance || 0,
             creditLimit: c.credit_limit || c.creditLimit || 0
-          })));
+          }));
+          setCustomers(processedCustomers);
+          await saveLocalCustomers(processedCustomers);
+        } else if (cachedCustomers.length > 0) {
+          // If server call fails or is empty, fallback to cached
+          setCustomers(cachedCustomers);
         } else {
           setCustomers([]);
         }
@@ -200,12 +271,12 @@ export default function POS() {
       shouldPrintRef.current = true;
       
       try {
-        const { supabase } = await import('../lib/supabase');
+        const { appwrite } = await import('../lib/appwrite');
 
-        const { data: userData } = await supabase.auth.getUser();
+        const { data: userData } = await appwrite.auth.getUser();
           let businessId = null;
           if (userData?.user) {
-            const { data: businessData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
+            const { data: businessData } = await appwrite.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
             businessId = businessData?.business_id;
           }
 
@@ -221,7 +292,7 @@ export default function POS() {
           if (businessId) salePayload.business_id = businessId;
           if (sale.customerId) salePayload.customer_id = sale.customerId;
 
-          const { data: saleDoc, error: saleErr } = await supabase.from('sales').insert([salePayload]).select().single();
+          const { data: saleDoc, error: saleErr } = await appwrite.from('sales').insert([salePayload]).select().single();
 
           if (saleDoc && sale.items.length > 0) {
              const itemsPayload = sale.items.map(item => ({
@@ -232,23 +303,23 @@ export default function POS() {
                line_total: item.subtotal,
                vat_amount: item.vatAmount
              }));
-             await supabase.from('sale_items').insert(itemsPayload);
+             await appwrite.from('sale_items').insert(itemsPayload);
           }
 
           // 2. Update Credit Balance if needed
           const creditPayment = sale.payments.find(p => p.method === 'credit');
         if (creditPayment && sale.customerId) {
-          const { data: custData } = await supabase.from('customers').select('*').eq('id', sale.customerId).single();
+          const { data: custData } = await appwrite.from('customers').select('*').eq('id', sale.customerId).single();
           if (custData) {
             const newBalance = Number(custData.balance || 0) + creditPayment.amount;
-            await supabase.from('customers').update({ balance: newBalance }).eq('id', sale.customerId);
+            await appwrite.from('customers').update({ balance: newBalance }).eq('id', sale.customerId);
           }
         }
 
         // 3. Update Cash Drawer
         const cashPayment = sale.payments.find(p => p.method === 'cash');
         if (cashPayment && saleDoc) {
-          await supabase.from('cash_drawer_logs').insert([{
+          await appwrite.from('cash_drawer_logs').insert([{
             amount: cashPayment.amount, // Record the exact cash amount processed
             transaction_type: 'cash_sale',
             notes: `Sale ${sale.receiptNumber}`,
@@ -394,7 +465,14 @@ export default function POS() {
                 </div>
                 <div className="p-3 flex flex-col flex-1">
                   <h4 className="font-semibold text-sm line-clamp-2 leading-tight mb-1">{product.name}</h4>
-                  <p className="text-xs text-zinc-500 font-mono mb-2">{product.sku}</p>
+                  <p className="text-xs text-zinc-500 font-mono mb-1">{product.sku}</p>
+                  
+                  <div className="flex items-center gap-1 mb-2">
+                    <span className="text-[10px] uppercase font-bold tracking-wider text-zinc-400">Stock:</span>
+                    <span className={`text-xs font-mono font-bold ${(product.stock || 0) > 0 ? ((product.stock || 0) <= 5 ? 'text-amber-500' : 'text-emerald-600') : 'text-rose-500'}`}>
+                      {product.stock ?? 0} left
+                    </span>
+                  </div>
                   
                   <div className="mt-auto flex items-center justify-between">
                     <span className="font-bold text-primary text-base">
