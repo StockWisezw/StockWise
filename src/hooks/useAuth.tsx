@@ -1,10 +1,10 @@
 import * as React from 'react';
 import { useState, useEffect, createContext, useContext } from 'react';
-import { supabase } from '../lib/supabase';
-import { User } from '@supabase/supabase-js';
+import { account } from '../lib/appwrite';
+import { Models } from 'appwrite';
 
 type AuthContextType = {
-  user: User | null;
+  user: Models.User<Models.Preferences> | null;
   loading: boolean;
   signOut: () => Promise<void>;
 };
@@ -12,37 +12,38 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({ user: null, loading: true, signOut: async () => {} });
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<Models.User<Models.Preferences> | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const isGuest = localStorage.getItem('isGuest') === 'true';
     if (isGuest) {
       setUser({
-        id: 'guest-user',
+        $id: 'guest-user',
         email: 'guest@tareza.local',
-      } as unknown as User);
+      } as unknown as Models.User<Models.Preferences>);
       setLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ?? null);
-      }
-    );
-
-    return () => subscription.unsubscribe();
+    account.get()
+      .then((accountUser) => {
+        setUser(accountUser);
+        setLoading(false);
+      })
+      .catch(() => {
+        setUser(null);
+        setLoading(false);
+      });
   }, []);
 
   const signOut = async () => {
     localStorage.removeItem('isGuest');
-    await supabase.auth.signOut();
+    try {
+      await account.deleteSession('current');
+    } catch(e) {
+      console.error('Sign out error', e);
+    }
     setUser(null);
   };
 
