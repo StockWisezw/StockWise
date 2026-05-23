@@ -253,14 +253,19 @@ class FirebaseQueryBuilder implements PromiseLike<{ data: any[] | null; count: n
   }
 
   async maybeSingle() {
-    const res = await this.executeSelect();
-    return { data: res[0] || null, error: null };
+    const result = await this.execute();
+    return { data: result.data?.[0] || null, error: result.error };
   }
 
   async single() {
-    const res = await this.executeSelect();
-    if (!res[0]) return { data: null, error: new Error('Document not found') };
-    return { data: res[0], error: null };
+    const result = await this.execute();
+    if (result.error) {
+      return { data: null, error: result.error };
+    }
+    if (!result.data || !result.data[0]) {
+      return { data: null, error: new Error('Document not found') };
+    }
+    return { data: result.data[0], error: null };
   }
 
   async executeSelect() {

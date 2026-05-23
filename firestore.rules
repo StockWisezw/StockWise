@@ -21,107 +21,128 @@ service cloud.firestore {
 
     // 2. Profiles Collection - User can manage their own profile record
     match /profiles/{profileId} {
-      allow read, write: if isSignedIn() && (profileId == request.auth.uid);
+      allow get, write: if isSignedIn() && (profileId == request.auth.uid);
+      allow list: if isSignedIn();
     }
 
     // 3. Businesses Collection
     match /businesses/{businessId} {
-      allow read, write: if isSignedIn() && isValidId(businessId);
+      allow get, write: if isSignedIn() && isValidId(businessId);
+      allow list: if isSignedIn();
     }
 
     // 4. Branches Collection
     match /branches/{branchId} {
-      allow read, write: if isSignedIn() && isValidId(branchId);
+      allow get, write: if isSignedIn() && isValidId(branchId);
+      allow list: if isSignedIn();
     }
 
     // 5. Roles Collection
     match /roles/{roleId} {
-      allow read, write: if isSignedIn() && isValidId(roleId);
+      allow get, write: if isSignedIn() && isValidId(roleId);
+      allow list: if isSignedIn();
     }
 
     // 6. Role Permissions Collection
     match /role_permissions/{permId} {
-      allow read, write: if isSignedIn() && isValidId(permId);
+      allow get, write: if isSignedIn() && isValidId(permId);
+      allow list: if isSignedIn();
     }
 
     // 7. Business Users Association
     match /business_users/{busUserId} {
-      allow read, write: if isSignedIn() && isValidId(busUserId);
+      allow get, write: if isSignedIn() && isValidId(busUserId);
+      allow list: if isSignedIn();
     }
 
     // 8. Categories Collection
     match /categories/{categoryId} {
-      allow read, write: if isSignedIn() && isValidId(categoryId);
+      allow get, write: if isSignedIn() && isValidId(categoryId);
+      allow list: if isSignedIn();
     }
 
     // 9. Products Collection
     match /products/{productId} {
-      allow read, write: if isSignedIn() && isValidId(productId);
+      allow get, write: if isSignedIn() && isValidId(productId);
+      allow list: if isSignedIn();
     }
 
     // 10. Inventory Collection
     match /inventory/{inventoryId} {
-      allow read, write: if isSignedIn() && isValidId(inventoryId);
+      allow get, write: if isSignedIn() && isValidId(inventoryId);
+      allow list: if isSignedIn();
     }
 
     // 11. Customers Collection
     match /customers/{customerId} {
-      allow read, write: if isSignedIn() && isValidId(customerId);
+      allow get, write: if isSignedIn() && isValidId(customerId);
+      allow list: if isSignedIn();
     }
 
     // 12. Suppliers Collection
     match /suppliers/{supplierId} {
-      allow read, write: if isSignedIn() && isValidId(supplierId);
+      allow get, write: if isSignedIn() && isValidId(supplierId);
+      allow list: if isSignedIn();
     }
 
     // 13. Sales Collection
     match /sales/{saleId} {
-      allow read, write: if isSignedIn() && isValidId(saleId);
+      allow get, write: if isSignedIn() && isValidId(saleId);
+      allow list: if isSignedIn();
     }
 
     // 14. Sale Items Collection
     match /sale_items/{saleItemId} {
-      allow read, write: if isSignedIn() && isValidId(saleItemId);
+      allow get, write: if isSignedIn() && isValidId(saleItemId);
+      allow list: if isSignedIn();
     }
 
     // 15. Expense Categories Collection
     match /expense_categories/{expCatId} {
-      allow read, write: if isSignedIn() && isValidId(expCatId);
+      allow get, write: if isSignedIn() && isValidId(expCatId);
+      allow list: if isSignedIn();
     }
 
     // 16. Cash Drawer Logs Collection
     match /cash_drawer_logs/{logId} {
-      allow read, write: if isSignedIn() && isValidId(logId);
+      allow get, write: if isSignedIn() && isValidId(logId);
+      allow list: if isSignedIn();
     }
 
     // 17. Tax Rates Collection
     match /tax_rates/{rateId} {
-      allow read, write: if isSignedIn() && isValidId(rateId);
+      allow get, write: if isSignedIn() && isValidId(rateId);
+      allow list: if isSignedIn();
     }
 
     // 18. Purchase Orders Collection
     match /purchase_orders/{poId} {
-      allow read, write: if isSignedIn() && isValidId(poId);
+      allow get, write: if isSignedIn() && isValidId(poId);
+      allow list: if isSignedIn();
     }
 
     // 19. Stocktakes Advanced Collection
     match /stocktakes_advanced/{stId} {
-      allow read, write: if isSignedIn() && isValidId(stId);
+      allow get, write: if isSignedIn() && isValidId(stId);
+      allow list: if isSignedIn();
     }
 
     // 20. Inventory Transfers Collection
     match /inventory_transfers/{itId} {
-      allow read, write: if isSignedIn() && isValidId(itId);
+      allow get, write: if isSignedIn() && isValidId(itId);
+      allow list: if isSignedIn();
     }
 
     // 21. Stock Movements Collection
     match /stock_movements/{movId} {
-      allow read, write: if isSignedIn() && isValidId(movId);
+      allow get, write: if isSignedIn() && isValidId(movId);
+      allow list: if isSignedIn();
     }
 
     // 22. Subscriptions Collection
     match /subscriptions/{subId} {
-      allow read, write: if isSignedIn() && isValidId(subId);
+      allow get, write: if isSignedIn() && isValidId(subId);
+      allow list: if isSignedIn();
     }
   }
 }
