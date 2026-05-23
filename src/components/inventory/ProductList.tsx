@@ -168,7 +168,7 @@ export function ProductList() {
        // fetchProducts() is also called by Realtime, but calling it here is fine as fallback
        fetchProducts();
     } catch (err: any) {
-       console.error("Supabase insert error", err);
+       console.error("Firebase insert error", err);
        toast.error(`Error adding product: ${err.message || 'Unknown error'}`);
     }
   };

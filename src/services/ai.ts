@@ -1,4 +1,4 @@
-// AI services file connecting to Supabase Edge Functions
+// AI services file connecting to local agent AI routes
 import { appwrite } from '../lib/appwrite';
 
 // AI Insights for Inventory

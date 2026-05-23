@@ -223,20 +223,20 @@ export default function DeveloperPanel() {
                      
                      <h4 className="font-bold text-zinc-900 dark:text-zinc-50 mb-2">2. Implement Webhook Endpoint</h4>
                      <p className="mb-2">
-                       Set up a serverless function (e.g., using Supabase Edge Functions) to map payment events back to the database:
+                       Set up a serverless function (e.g., using Firebase Cloud Functions) to map payment events back to the database:
                      </p>
                      <pre className="bg-zinc-950 p-3 rounded-md text-xs text-green-400 overflow-x-auto">
-{`// Supabase Edge Function to handle Paynow/Stripe Webhook
-import { createClient } from '@appwrite/appwrite-js'
+{`// Firebase Cloud Function to handle Paynow/Stripe Webhook
+import { getFirestore } from 'firebase-admin/firestore'
 
 export async function handlePaymentWebhook(req) {
   const { business_id, status } = await req.json()
-  const appwrite = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
+  const db = getFirestore()
   
   if(status === 'PAID') {
-    await appwrite.from('businesses')
+    await db.collection('businesses')
+      .doc(business_id)
       .update({ subscription_status: 'ACTIVE' })
-      .eq('id', business_id)
   }
 }`}
                      </pre>
@@ -247,7 +247,7 @@ export async function handlePaymentWebhook(req) {
                        <AlertCircle className="w-4 h-4" /> Next Steps to go Live
                      </h4>
                      <ol className="list-decimal pl-5 space-y-1">
-                       <li>Create a Supabase Edge function for webhooks.</li>
+                       <li>Create a Firebase Cloud Function for webhooks.</li>
                        <li>Provide the Edge function URL to your Paynow/Stripe dashboard.</li>
                        <li>Integrate the "Checkout" button on the billing page to redirect to the gateway.</li>
                      </ol>

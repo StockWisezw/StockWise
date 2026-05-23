@@ -69,7 +69,7 @@ export default function Login() {
         const user = data.user;
         if (!user) throw new Error("User creation failed");
 
-        // Setup Supabase Data
+        // Setup Firebase Data
         await appwrite.from('profiles').insert([
           { id: user.id, first_name: firstName, last_name: lastName, email: user.email }
         ]);

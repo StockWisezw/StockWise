@@ -10,7 +10,7 @@ export function SyncManager() {
     const syncInterval = setInterval(() => {
       if (offlineQueue.length > 0) {
         // In a real application, we'd check navigator.onLine and attempt to POST
-        // the offlineQueue to our Supabase Edge Function here.
+        // the offlineQueue to our Firebase database / Cloud Function here.
         console.log(`[ZIMRA Sync] Attempting to sync ${offlineQueue.length} offline receipts...`);
         
         // Mock successful sync: We'd update the Zustand store to clear these or mark status as 'synced'

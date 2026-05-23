@@ -328,7 +328,7 @@ export default function POS() {
           }]);
         }
       } catch (err) {
-        console.error('Failed to sync sale to Supabase / update credit balance', err);
+        console.error('Failed to sync sale to Firebase / update credit balance', err);
       }
     } else {
       toast.error('Could not complete sale. Check balance.');

@@ -130,7 +130,7 @@ export function CustomerDirectory() {
       setNewCustomerPhone('');
       fetchCustomers();
     } catch (err: any) {
-      console.error("Supabase insert error", err);
+      console.error("Firebase insert error", err);
       toast.error(`Error adding customer: ${err.message || 'Unknown error'}`);
     }
   };

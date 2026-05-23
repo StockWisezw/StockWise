@@ -1,0 +1,127 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 1. Global Safety Net: Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Common helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    // 2. Profiles Collection - User can manage their own profile record
+    match /profiles/{profileId} {
+      allow read, write: if isSignedIn() && (profileId == request.auth.uid);
+    }
+
+    // 3. Businesses Collection
+    match /businesses/{businessId} {
+      allow read, write: if isSignedIn() && isValidId(businessId);
+    }
+
+    // 4. Branches Collection
+    match /branches/{branchId} {
+      allow read, write: if isSignedIn() && isValidId(branchId);
+    }
+
+    // 5. Roles Collection
+    match /roles/{roleId} {
+      allow read, write: if isSignedIn() && isValidId(roleId);
+    }
+
+    // 6. Role Permissions Collection
+    match /role_permissions/{permId} {
+      allow read, write: if isSignedIn() && isValidId(permId);
+    }
+
+    // 7. Business Users Association
+    match /business_users/{busUserId} {
+      allow read, write: if isSignedIn() && isValidId(busUserId);
+    }
+
+    // 8. Categories Collection
+    match /categories/{categoryId} {
+      allow read, write: if isSignedIn() && isValidId(categoryId);
+    }
+
+    // 9. Products Collection
+    match /products/{productId} {
+      allow read, write: if isSignedIn() && isValidId(productId);
+    }
+
+    // 10. Inventory Collection
+    match /inventory/{inventoryId} {
+      allow read, write: if isSignedIn() && isValidId(inventoryId);
+    }
+
+    // 11. Customers Collection
+    match /customers/{customerId} {
+      allow read, write: if isSignedIn() && isValidId(customerId);
+    }
+
+    // 12. Suppliers Collection
+    match /suppliers/{supplierId} {
+      allow read, write: if isSignedIn() && isValidId(supplierId);
+    }
+
+    // 13. Sales Collection
+    match /sales/{saleId} {
+      allow read, write: if isSignedIn() && isValidId(saleId);
+    }
+
+    // 14. Sale Items Collection
+    match /sale_items/{saleItemId} {
+      allow read, write: if isSignedIn() && isValidId(saleItemId);
+    }
+
+    // 15. Expense Categories Collection
+    match /expense_categories/{expCatId} {
+      allow read, write: if isSignedIn() && isValidId(expCatId);
+    }
+
+    // 16. Cash Drawer Logs Collection
+    match /cash_drawer_logs/{logId} {
+      allow read, write: if isSignedIn() && isValidId(logId);
+    }
+
+    // 17. Tax Rates Collection
+    match /tax_rates/{rateId} {
+      allow read, write: if isSignedIn() && isValidId(rateId);
+    }
+
+    // 18. Purchase Orders Collection
+    match /purchase_orders/{poId} {
+      allow read, write: if isSignedIn() && isValidId(poId);
+    }
+
+    // 19. Stocktakes Advanced Collection
+    match /stocktakes_advanced/{stId} {
+      allow read, write: if isSignedIn() && isValidId(stId);
+    }
+
+    // 20. Inventory Transfers Collection
+    match /inventory_transfers/{itId} {
+      allow read, write: if isSignedIn() && isValidId(itId);
+    }
+
+    // 21. Stock Movements Collection
+    match /stock_movements/{movId} {
+      allow read, write: if isSignedIn() && isValidId(movId);
+    }
+
+    // 22. Subscriptions Collection
+    match /subscriptions/{subId} {
+      allow read, write: if isSignedIn() && isValidId(subId);
+    }
+  }
+}
