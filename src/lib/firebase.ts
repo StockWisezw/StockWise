@@ -36,9 +36,20 @@ import firebaseConfig from '../../firebase-applet-config.json';
 
 // Initialize Firebase SDK with long-polling configured for standard robust transit in sandbox/iframe environments
 const app = initializeApp(firebaseConfig);
-export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true
-}, firebaseConfig.firestoreDatabaseId || '(default)');
+
+// Keep long polling enabled for sandbox and iframe environments, and ensure it does not conflict
+// with auto-detection by explicitly disabling auto-detection when forced long polling is active.
+const forceLongPolling = true;
+const firestoreSettings: any = {};
+
+if (forceLongPolling) {
+  firestoreSettings.experimentalForceLongPolling = true;
+  // experimentalAutoDetectLongPolling has to be omitted or set to false when experimentalForceLongPolling is true
+} else {
+  firestoreSettings.experimentalAutoDetectLongPolling = true;
+}
+
+export const db = initializeFirestore(app, firestoreSettings, firebaseConfig.firestoreDatabaseId || '(default)');
 export const auth = getAuth();
 
 // Test connection on boot as mandated by the Firebase Integration Skill
