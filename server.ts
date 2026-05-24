@@ -4,10 +4,49 @@ import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
 import { GoogleGenAI } from "@google/genai";
+import { runLedgerBackup, startBackupScheduler } from "./server/backupService";
+import { runDatabaseSeeder } from "./server/seeder";
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
   app.use(express.json());
+
+  // Scheduled Database & Ledger Backups Support
+  app.post("/api/admin/backups/run", async (req, res) => {
+    try {
+      const result = await runLedgerBackup();
+      res.json(result);
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message || String(err) });
+    }
+  });
+
+  app.get("/api/admin/backups/logs", async (req, res) => {
+    try {
+      const admin = (await import('firebase-admin')).default;
+      const { getFirestore } = await import('firebase-admin/firestore');
+      const firebaseConfig = (await import('./firebase-applet-config.json')).default;
+      const app = admin.apps[0] || admin.initializeApp({
+        projectId: firebaseConfig.projectId,
+        storageBucket: firebaseConfig.storageBucket
+      });
+      const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
+        
+      const snap = await db.collection('backup_logs').orderBy('timestamp', 'desc').limit(50).get();
+      const logs: any[] = [];
+      snap.forEach(docSnap => {
+        logs.push({
+          id: docSnap.id,
+          ...docSnap.data()
+        });
+      });
+      res.json({ success: true, logs });
+    } catch (err: any) {
+      res.status(500).json({ success: false, error: err.message || String(err) });
+    }
+  });
+
   // AI API Route
   app.post("/api/ai/insights", async (req, res) => {
     try {
@@ -55,6 +94,17 @@ async function startServer() {
       }
     });
   }
+  
+  // Start the background automatic helper scheduler
+  startBackupScheduler();
+
+  // Run database check, superadmin setup, and clean seeding
+  try {
+    await runDatabaseSeeder();
+  } catch (err) {
+    console.error("[Startup] Failed to run database seeder:", err);
+  }
+
   app.listen(PORT, "0.0.0.0", () => {
     console.log(`Server running on http://0.0.0.0:${PORT}`);
   });

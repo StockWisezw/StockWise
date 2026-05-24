@@ -294,6 +294,31 @@ export default function Login() {
                 ? 'Enter your email address and we\'ll send you a link to reset your password.' 
                 : (isSignUp ? 'Enter your details to get started' : 'Enter your email and password to access your account')}
             </CardDescription>
+            {!isForgotPassword && (
+              <div 
+                className="mt-4 p-3.5 bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl flex flex-col gap-1 cursor-pointer hover:bg-zinc-150 dark:hover:bg-zinc-800/80 transition-all select-none"
+                onClick={() => {
+                  setEmail('demo@tareza.co.zw');
+                  setPassword('tareza1997?');
+                  setIsSignUp(false);
+                }}
+              >
+                <div className="flex items-center gap-1.5 text-zinc-800 dark:text-zinc-200 font-bold text-[10px] uppercase tracking-wider">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-zinc-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-zinc-600 dark:bg-zinc-400"></span>
+                  </span>
+                  Zimbabwe Superadmin Demo
+                </div>
+                <div className="text-xs text-zinc-605 dark:text-zinc-400 space-y-0.5 font-mono">
+                  <div><strong className="font-sans font-medium text-zinc-500">User:</strong> demo@tareza.co.zw</div>
+                  <div><strong className="font-sans font-medium text-zinc-500">Pass:</strong> tareza1997?</div>
+                </div>
+                <div className="text-[10px] text-zinc-500 font-semibold mt-1 underline">
+                  Click to pre-fill credentials
+                </div>
+              </div>
+            )}
           </CardHeader>
           <form onSubmit={isForgotPassword ? handleForgotPassword : handleAuth}>
             <CardContent className="space-y-5 p-8">
@@ -303,7 +328,7 @@ export default function Login() {
                   <Input 
                     id="email" 
                     type="email" 
-                    placeholder="admin@tareza.co.zw" 
+                    placeholder="demo@tareza.co.zw" 
                     value={email}
                     onChange={(e) => {
                       setEmail(e.target.value);
@@ -416,7 +441,7 @@ export default function Login() {
                     <Input 
                       id="email" 
                       type="email" 
-                      placeholder="admin@tareza.co.zw" 
+                      placeholder="demo@tareza.co.zw" 
                       value={email}
                       onChange={(e) => {
                         setEmail(e.target.value);

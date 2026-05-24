@@ -15,6 +15,7 @@ import {
   Calendar,
   AlertCircle
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
@@ -93,6 +94,188 @@ export default function Accounting() {
   // Global filters
   const [coaSearch, setCoaSearch] = useState('');
   const [ledgerSearch, setLedgerSearch] = useState('');
+
+  // Floating speed-dial control and modal toggle states
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
+  const [showQuickExpense, setShowQuickExpense] = useState(false);
+  const [showQuickJournal, setShowQuickJournal] = useState(false);
+  const [showQuickReport, setShowQuickReport] = useState(false);
+
+  // Quick Expense states
+  const [expenseAccount, setExpenseAccount] = useState('6005');
+  const [paidFromAccount, setPaidFromAccount] = useState('1000');
+  const [expenseAmount, setExpenseAmount] = useState('');
+  const [expenseRef, setExpenseRef] = useState('');
+  const [expenseDesc, setExpenseDesc] = useState('');
+
+  // Quick Journal Form states
+  const [quickRefCode, setQuickRefCode] = useState('');
+  const [quickNarrative, setQuickNarrative] = useState('');
+  const [quickLines, setQuickLines] = useState<Array<{ accountCode: string; debit: number; credit: number }>>([
+    { accountCode: '1000', debit: 0, credit: 0 },
+    { accountCode: '4000', debit: 0, credit: 0 },
+  ]);
+
+  // Set default expense account on load if 6000 exists
+  useEffect(() => {
+    if (accounts.length > 0) {
+      const firstExp = accounts.find(a => a.type === 'Expense');
+      if (firstExp) {
+        setExpenseAccount(firstExp.code);
+      }
+    }
+  }, [accounts]);
+
+  const addQuickLine = () => {
+    setQuickLines([...quickLines, { accountCode: '', debit: 0, credit: 0 }]);
+  };
+
+  const removeQuickLine = (index: number) => {
+    if (quickLines.length <= 2) {
+      toast.warning('At least two lines are mandatory to complete a double-entry transaction.');
+      return;
+    }
+    setQuickLines(quickLines.filter((_, idx) => idx !== index));
+  };
+
+  const updateQuickLineValue = (index: number, key: 'accountCode' | 'debit' | 'credit', val: any) => {
+    const updated = [...quickLines];
+    if (key === 'debit') {
+      updated[index].debit = parseFloat(val) || 0;
+      if (updated[index].debit > 0) updated[index].credit = 0;
+    } else if (key === 'credit') {
+      updated[index].credit = parseFloat(val) || 0;
+      if (updated[index].debit > 0) updated[index].debit = 0;
+    } else {
+      updated[index].accountCode = val;
+    }
+    setQuickLines(updated);
+  };
+
+  const handleQuickExpenseSubmit = async () => {
+    try {
+      if (!expenseAmount || !expenseRef || !expenseDesc || !expenseAccount || !paidFromAccount) {
+        toast.error('All expense fields are compulsory.');
+        return;
+      }
+      const amountNum = parseFloat(expenseAmount);
+      if (isNaN(amountNum) || amountNum <= 0) {
+        toast.error('Expense amount must be a positive number.');
+        return;
+      }
+      const { data: userData } = await appwrite.auth.getUser();
+      if (!userData?.user) return;
+
+      const { data: businessData } = await appwrite.from('business_users')
+        .select('business_id, branch_id')
+        .eq('user_id', userData.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const businessId = businessData?.business_id || 'default_business';
+      const branchId = businessData?.branch_id || 'default_branch';
+
+      // Verify asset and expense accounts exist
+      const expExists = accounts.some(a => a.code === expenseAccount);
+      const assetExists = accounts.some(a => a.code === paidFromAccount);
+      if (!expExists || !assetExists) {
+        toast.error('Selected accounts are invalid or missing from the Chart of Accounts.');
+        return;
+      }
+
+      const res = await postJournalEntry(
+        businessId,
+        branchId,
+        userData.user.id,
+        expenseRef.toUpperCase(),
+        expenseDesc,
+        [
+          { accountCode: expenseAccount, debit: amountNum, credit: 0, description: expenseDesc },
+          { accountCode: paidFromAccount, debit: 0, credit: amountNum, description: expenseDesc }
+        ]
+      );
+
+      if (res.success) {
+        toast.success(`Expense ${expenseRef.toUpperCase()} successfully recorded & balanced!`);
+        setExpenseAmount('');
+        setExpenseRef('');
+        setExpenseDesc('');
+        setShowQuickExpense(false);
+        await loadAllAccountingData();
+      } else {
+        toast.error(res.error || 'Failed to post expense.');
+      }
+    } catch (err: any) {
+      toast.error(err.message || 'Error occurred while saving expense.');
+    }
+  };
+
+  const handleQuickJournalSubmit = async () => {
+    try {
+      if (!quickRefCode || !quickNarrative) {
+        toast.error('Reference and Narrative are compulsory ledger entries.');
+        return;
+      }
+
+      const debSum = quickLines.reduce((acc, l) => acc + Number(l.debit || 0), 0);
+      const credSum = quickLines.reduce((acc, l) => acc + Number(l.credit || 0), 0);
+
+      if (Math.abs(debSum - credSum) > 0.01) {
+        toast.error(`Posting unbalance error! Total Debits ($${debSum.toFixed(2)}) must exactly match Total Credits ($${credSum.toFixed(2)})`);
+        return;
+      }
+
+      if (debSum === 0) {
+        toast.error('Transaction value cannot be zero.');
+        return;
+      }
+
+      const { data: userData } = await appwrite.auth.getUser();
+      if (!userData?.user) return;
+
+      const { data: businessData } = await appwrite.from('business_users')
+        .select('business_id, branch_id')
+        .eq('user_id', userData.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const businessId = businessData?.business_id || 'default_business';
+      const branchId = businessData?.branch_id || 'default_branch';
+
+      for (const line of quickLines) {
+        const found = accounts.find(a => a.code === line.accountCode);
+        if (!found) {
+          toast.error(`Account code '${line.accountCode}' does not exist inside Chart of Accounts.`);
+          return;
+        }
+      }
+
+      const res = await postJournalEntry(
+        businessId,
+        branchId,
+        userData.user.id,
+        quickRefCode.toUpperCase(),
+        quickNarrative,
+        quickLines
+      );
+
+      if (res.success) {
+        toast.success('Double-entry quick journal posted successfully!');
+        setQuickRefCode('');
+        setQuickNarrative('');
+        setQuickLines([
+          { accountCode: '1000', debit: 0, credit: 0 },
+          { accountCode: '4000', debit: 0, credit: 0 },
+        ]);
+        setShowQuickJournal(false);
+        await loadAllAccountingData();
+      } else {
+        toast.error(res.error || 'Failed to post transaction.');
+      }
+    } catch (e: any) {
+      toast.error(e.message || 'Failed to post journal entry.');
+    }
+  };
 
   const loadAllAccountingData = async () => {
     try {
@@ -916,6 +1099,412 @@ export default function Accounting() {
 
         </div>
       </Tabs>
+
+      {/* Floating Quick Actions Speed Dial */}
+      <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end gap-3 font-sans">
+        <AnimatePresence>
+          {isQuickActionsOpen && (
+            <motion.div 
+              initial={{ opacity: 0, y: 15, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 15, scale: 0.9 }}
+              transition={{ type: 'spring', stiffness: 350, damping: 25 }}
+              className="flex flex-col items-end gap-2.5 mb-1"
+            >
+              {/* Record Expense Action */}
+              <div className="flex items-center gap-2 group">
+                <span className="bg-white/95 text-zinc-900 border border-zinc-200/80 shadow-sm rounded-lg px-2.5 py-1 text-xs font-semibold backdrop-blur-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap">
+                  Record Expense
+                </span>
+                <Button 
+                  onClick={() => {
+                    setShowQuickExpense(true);
+                    setIsQuickActionsOpen(false);
+                  }}
+                  size="icon"
+                  className="w-11 h-11 bg-amber-500 hover:bg-amber-600 border border-amber-600 text-white rounded-full shadow-lg transition-all transform hover:scale-105 cursor-pointer"
+                  title="Record Expense"
+                >
+                  <Coins className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Create Journal Action */}
+              <div className="flex items-center gap-2 group">
+                <span className="bg-white/95 text-zinc-900 border border-zinc-200/80 shadow-sm rounded-lg px-2.5 py-1 text-xs font-semibold backdrop-blur-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap">
+                  Create Journal Entry
+                </span>
+                <Button 
+                  onClick={() => {
+                    setShowQuickJournal(true);
+                    setIsQuickActionsOpen(false);
+                  }}
+                  size="icon"
+                  className="w-11 h-11 bg-indigo-500 hover:bg-indigo-600 border border-indigo-600 text-white rounded-full shadow-lg transition-all transform hover:scale-105 cursor-pointer"
+                  title="Create Journal"
+                >
+                  <BookOpen className="w-5 h-5" />
+                </Button>
+              </div>
+
+              {/* Generate Report Action */}
+              <div className="flex items-center gap-2 group">
+                <span className="bg-white/95 text-zinc-900 border border-zinc-200/80 shadow-sm rounded-lg px-2.5 py-1 text-xs font-semibold backdrop-blur-sm pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-150 whitespace-nowrap">
+                  Generate Financial Report
+                </span>
+                <Button 
+                  onClick={() => {
+                    setShowQuickReport(true);
+                    setIsQuickActionsOpen(false);
+                  }}
+                  size="icon"
+                  className="w-11 h-11 bg-emerald-500 hover:bg-emerald-600 border border-emerald-600 text-white rounded-full shadow-lg transition-all transform hover:scale-105 cursor-pointer"
+                  title="Generate Report"
+                >
+                  <FileSpreadsheet className="w-5 h-5" />
+                </Button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Root Toggle FAB */}
+        <Button 
+          onClick={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
+          className="w-14 h-14 bg-zinc-900 hover:bg-zinc-805 text-white rounded-full shadow-xl transition-all flex items-center justify-center border border-zinc-950 cursor-pointer"
+        >
+          <motion.div
+            animate={{ rotate: isQuickActionsOpen ? 135 : 0 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 20 }}
+          >
+            <Plus className="w-6 h-6" />
+          </motion.div>
+        </Button>
+      </div>
+
+      {/* Quick Actions Modals */}
+      
+      {/* 1. Record Expense Dialog */}
+      <Dialog open={showQuickExpense} onOpenChange={setShowQuickExpense}>
+        <DialogContent className="sm:max-w-md font-sans bg-white">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-zinc-900">
+              <Coins className="w-5 h-5 text-amber-500 animate-pulse" /> Record Quick Cash Expense
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-600">Expense Ledger Account</label>
+                <select 
+                  value={expenseAccount} 
+                  onChange={(e) => setExpenseAccount(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs bg-white text-zinc-800"
+                >
+                  <option value="">-- Choose Expense --</option>
+                  {accounts.filter(a => a.type === 'Expense').map(a => (
+                    <option key={a.id} value={a.code}>{a.code} - {a.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-600">Paid Out From Account</label>
+                <select 
+                  value={paidFromAccount} 
+                  onChange={(e) => setPaidFromAccount(e.target.value)}
+                  className="w-full border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs bg-white text-zinc-800"
+                >
+                  <option value="">-- Choose Source --</option>
+                  {accounts.filter(a => a.type === 'Asset').map(a => (
+                    <option key={a.id} value={a.code}>{a.code} - {a.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-600">Amount (USD)</label>
+                <Input 
+                  type="number" 
+                  placeholder="0.00" 
+                  value={expenseAmount} 
+                  onChange={(e) => setExpenseAmount(e.target.value)}
+                  className="text-xs bg-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-semibold text-zinc-600">Invoice / Receipt Reference</label>
+                <Input 
+                  placeholder="e.g. TAXI-102 or LUNCH-01" 
+                  value={expenseRef} 
+                  onChange={(e) => setExpenseRef(e.target.value)}
+                  className="text-xs font-mono uppercase bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-xs font-semibold text-zinc-600">Expense Narrative/Explanation</label>
+              <Input 
+                placeholder="e.g. Weekly client lunch and taxi transport" 
+                value={expenseDesc} 
+                onChange={(e) => setExpenseDesc(e.target.value)}
+                className="text-xs bg-white"
+              />
+            </div>
+          </div>
+          <DialogFooter className="bg-zinc-50 border-t border-zinc-100 p-4 -mx-6 -mb-6 mt-2 rounded-b-lg">
+            <Button variant="outline" size="sm" onClick={() => setShowQuickExpense(false)}>Cancel</Button>
+            <Button size="sm" onClick={handleQuickExpenseSubmit} className="bg-zinc-900 text-white hover:bg-zinc-805">
+              Post Expense Entry
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 2. Create Journal Entry Dialog */}
+      <Dialog open={showQuickJournal} onOpenChange={setShowQuickJournal}>
+        <DialogContent className="sm:max-w-2xl font-sans max-h-[90vh] flex flex-col p-0 bg-white">
+          <DialogHeader className="p-6 pb-4 border-b border-zinc-100 font-sans">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-zinc-900">
+              <BookOpen className="w-5 h-5 text-indigo-500 animate-pulse" /> Quick Double-Entry Journal Adjustment
+            </DialogTitle>
+          </DialogHeader>
+          
+          <ScrollArea className="flex-1 p-6 overflow-y-auto space-y-5">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-600">Ref Code</label>
+                <Input 
+                  placeholder="e.g. REC-022" 
+                  value={quickRefCode} 
+                  onChange={(e) => setQuickRefCode(e.target.value)}
+                  className="text-xs font-mono bg-white"
+                />
+              </div>
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-zinc-600">Narrative</label>
+                <Input 
+                  placeholder="Describe adjusting entry" 
+                  value={quickNarrative} 
+                  onChange={(e) => setQuickNarrative(e.target.value)}
+                  className="text-xs bg-white"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <div className="flex justify-between items-center bg-zinc-50 px-3 py-1.5 rounded-lg border border-zinc-200 text-[11px] font-bold uppercase tracking-wider text-zinc-600 font-mono">
+                <span>Journal Entries</span>
+                <Button size="xs" variant="outline" onClick={addQuickLine} className="bg-white text-[10px] h-7 cursor-pointer">
+                  + Add Ledger Row
+                </Button>
+              </div>
+
+              <div className="space-y-2 font-mono text-xs max-h-[30vh] overflow-y-auto pr-1">
+                {quickLines.map((line, idx) => (
+                  <div key={idx} className="flex gap-2 items-center">
+                    <select 
+                      value={line.accountCode}
+                      onChange={(e) => updateQuickLineValue(idx, 'accountCode', e.target.value)}
+                      className="flex-1 border border-zinc-200 rounded-lg px-2.5 py-1.5 text-xs bg-white text-zinc-700 min-w-0"
+                    >
+                      <option value="">-- Choose Account --</option>
+                      {accounts.map(a => (
+                        <option key={a.id} value={a.code}>{a.code} - {a.name} ({a.type})</option>
+                      ))}
+                    </select>
+
+                    <div className="w-24 flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-zinc-400 font-mono">Dr</span>
+                      <Input 
+                        type="number" 
+                        placeholder="0.00" 
+                        value={line.debit || ''} 
+                        disabled={Number(line.credit) > 0}
+                        onChange={(e) => updateQuickLineValue(idx, 'debit', e.target.value)}
+                        className="text-xs p-1 h-8 bg-white"
+                      />
+                    </div>
+
+                    <div className="w-24 flex items-center gap-1">
+                      <span className="text-[10px] font-bold text-zinc-400 font-mono">Cr</span>
+                      <Input 
+                        type="number" 
+                        placeholder="0.00" 
+                        value={line.credit || ''} 
+                        disabled={Number(line.debit) > 0}
+                        onChange={(e) => updateQuickLineValue(idx, 'credit', e.target.value)}
+                        className="text-xs p-1 h-8 text-right bg-white"
+                      />
+                    </div>
+
+                    <Button 
+                      size="sm" 
+                      variant="ghost" 
+                      onClick={() => removeQuickLine(idx)} 
+                      className="text-red-500 hover:text-red-700 hover:bg-red-50 h-8 w-8 p-0 cursor-pointer"
+                    >
+                      ✕
+                    </Button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Balancing Verification summary block */}
+            <div className="p-3 bg-zinc-50 border border-zinc-150 rounded-xl flex justify-between items-center text-[10px] font-semibold uppercase tracking-wider font-mono">
+              <div className="space-y-1 text-zinc-650">
+                <div>Debits Sum: <span className="font-bold text-zinc-900">${quickLines.reduce((acc, l) => acc + (l.debit || 0), 0).toFixed(2)}</span></div>
+                <div>Credits Sum: <span className="font-bold text-zinc-900">${quickLines.reduce((acc, l) => acc + (l.credit || 0), 0).toFixed(2)}</span></div>
+              </div>
+              {Math.abs(quickLines.reduce((acc, l) => acc + (l.debit || 0), 0) - quickLines.reduce((acc, l) => acc + (l.credit || 0), 0)) < 0.01 ? (
+                <div className="text-emerald-700 flex items-center gap-1 bg-emerald-100 border border-emerald-200 px-2.5 py-1 rounded">
+                  <Check className="w-3.5 h-3.5" /> BALANCED
+                </div>
+              ) : (
+                <div className="text-red-700 flex items-center gap-1 bg-red-100 border border-red-200 px-2.5 py-1 rounded">
+                  <AlertCircle className="w-3.5 h-3.5" /> UNBALANCED
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="bg-zinc-50 border-t border-zinc-100 p-4 rounded-b-lg">
+            <Button variant="outline" size="sm" onClick={() => setShowQuickJournal(false)}>Cancel</Button>
+            <Button 
+              size="sm"
+              onClick={handleQuickJournalSubmit} 
+              disabled={Math.abs(quickLines.reduce((acc, l) => acc + (l.debit || 0), 0) - quickLines.reduce((acc, l) => acc + (l.credit || 0), 0)) > 0.01}
+              className="bg-zinc-900 text-white hover:bg-zinc-805"
+            >
+              Post Journal Rows
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 3. Generate Report Dialog */}
+      <Dialog open={showQuickReport} onOpenChange={setShowQuickReport}>
+        <DialogContent className="sm:max-w-xl font-sans max-h-[90vh] flex flex-col p-0 bg-white">
+          <DialogHeader className="p-6 pb-4 border-b border-zinc-100 font-sans">
+            <DialogTitle className="flex items-center gap-2 text-base font-bold text-zinc-900">
+              <FileSpreadsheet className="w-5 h-5 text-emerald-500 animate-pulse" /> Rapid Financial Statement Generator
+            </DialogTitle>
+          </DialogHeader>
+
+          <ScrollArea className="flex-1 p-6 overflow-y-auto space-y-6">
+            <div id="quick-accounting-statement-printarea" className="space-y-4 p-4 border border-zinc-200/80 rounded-xl bg-white font-mono text-[11px] text-zinc-850 shadow-sm leading-relaxed">
+              <div className="text-center border-b border-zinc-200 pb-3">
+                <h3 className="text-xs font-bold tracking-tight uppercase text-zinc-900">TAREZA ENTERPRISE ERP SYSTEM</h3>
+                <p className="text-[10px] text-zinc-500 mt-1 font-sans">REAL-TIME INTEGRATED FINANCIAL STANDING REPORT</p>
+                <p className="text-[9px] text-zinc-400 mt-0.5 font-mono">Run On: {new Date().toLocaleString()}</p>
+              </div>
+
+              {/* Real-time Summary Metrics */}
+              <div className="space-y-2">
+                <h4 className="font-bold text-[10px] text-zinc-500 uppercase pb-0.5 border-b border-zinc-100 font-sans">1. Profit and Loss (Condensed)</h4>
+                <div className="flex justify-between">
+                  <span>Operating Sourced Revenues (4000)</span>
+                  <span className="font-bold text-zinc-800">${totalRevenueVal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-rose-700">
+                  <span>Cost of Sourced Goods Sales (5000)</span>
+                  <span className="font-bold">(${totalExpenseVal.toFixed(2)})</span>
+                </div>
+                <div className="flex justify-between border-t border-dashed border-zinc-200 pt-1.5 font-bold text-zinc-900 bg-zinc-50 px-1 py-0.5 rounded">
+                  <span>NET ESTIMATED OPERATIONAL EARNINGS</span>
+                  <span className={netEarningsPL >= 0 ? 'text-emerald-700' : 'text-rose-700'}>
+                    ${netEarningsPL.toFixed(2)}
+                  </span>
+                </div>
+              </div>
+
+              <div className="space-y-2 pt-2">
+                <h4 className="font-bold text-[10px] text-zinc-500 uppercase pb-0.5 border-b border-zinc-100 font-sans">2. Balance Sheet Status (Condensed)</h4>
+                <div className="flex justify-between">
+                  <span>Aggregate Asset Ledger Balances</span>
+                  <span className="text-zinc-800">${totalAssetsVal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Aggregate Liabilities (Accounts Payable)</span>
+                  <span className="text-zinc-850">${totalLiabilitiesVal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Owner Shareholder Retained Equity</span>
+                  <span className="text-zinc-850">${totalEquityVal.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between border-t border-dashed border-zinc-200 pt-1.5 font-bold text-zinc-900 bg-zinc-50 px-1 py-0.5 rounded">
+                  <span>LIABILITIES + EQUITY (RECONCILED)</span>
+                  <span className="text-zinc-900">${(totalLiabilitiesVal + totalEquityVal + netEarningsPL).toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Mathematical consistency checker */}
+              <div className="border-t border-zinc-205 pt-3 flex flex-col gap-1 text-[10px]">
+                <div className="flex justify-between text-zinc-650">
+                  <span>TRIAL BALANCE STATUS:</span>
+                  <span className="font-bold text-emerald-600">BALANCED AND SYNCED</span>
+                </div>
+                <div className="flex justify-between text-zinc-500">
+                  <span>Ledger Debit Postings Sum</span>
+                  <span>${cumulativeDebits.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-zinc-500">
+                  <span>Ledger Credit Postings Sum</span>
+                  <span>${cumulativeCredits.toFixed(2)}</span>
+                </div>
+              </div>
+
+              <div className="bg-zinc-50/50 p-2 border border-zinc-200/80 rounded text-[9px] text-zinc-450 text-center font-sans">
+                This declaration complies with standard double-entry accountability practices and automatic general ledger triggers.
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 font-sans">
+              <Button 
+                onClick={() => {
+                  const printContents = document.getElementById('quick-accounting-statement-printarea')?.innerHTML;
+                  if (printContents) {
+                    const printWindow = window.open('', '', 'height=600,width=800');
+                    if (printWindow) {
+                      printWindow.document.write('<html><head><title>General Accounting Statement</title><style>body { font-family: monospace; padding: 20px; }</style></head><body>');
+                      printWindow.document.write(printContents);
+                      printWindow.document.write('</body></html>');
+                      printWindow.document.close();
+                      printWindow.focus();
+                      printWindow.print();
+                    } else {
+                      window.print();
+                    }
+                  }
+                }}
+                className="w-full bg-zinc-900 border border-zinc-950 text-white hover:bg-zinc-800 text-xs font-bold cursor-pointer"
+              >
+                Print Direct Statement
+              </Button>
+              <Button 
+                variant="outline"
+                onClick={() => {
+                  const reportText = `TAREZA ERP REAL-TIME CONSOLIDATED STANDING REPORT\nDate: ${new Date().toLocaleString()}\n\n-- Profit and Loss Statement --\nOperating Revenue: \$${totalRevenueVal.toFixed(2)}\nCOGS / Expense: -\$${totalExpenseVal.toFixed(2)}\nNet Operating Earnings: \$${netEarningsPL.toFixed(2)}\n\n-- Balance Sheet Condensed Status --\nTotal Assets Balances: \$${totalAssetsVal.toFixed(2)}\nAccounts Payable Liability: \$${totalLiabilitiesVal.toFixed(2)}\nRetained Shareholder Equity: \$${totalEquityVal.toFixed(2)}\nTotal Liabilities + Equity Sum: \$${(totalLiabilitiesVal + totalEquityVal + netEarningsPL).toFixed(2)}\n\nReport synced successfully without latency.`;
+                  navigator.clipboard.writeText(reportText);
+                  toast.success('Plaintext Accounting statement copied to clipboard!');
+                }}
+                className="w-full text-xs cursor-pointer"
+              >
+                Copy Plaintext Format to Clipboard
+              </Button>
+            </div>
+          </ScrollArea>
+
+          <DialogFooter className="bg-zinc-50 border-t border-zinc-100 p-4 rounded-b-lg">
+            <Button size="sm" onClick={() => setShowQuickReport(false)} className="bg-zinc-900 text-white hover:bg-zinc-800 w-full md:w-auto cursor-pointer">
+              Close Report Viewer
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

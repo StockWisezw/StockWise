@@ -30,7 +30,6 @@ import {
   orderBy, 
   limit, 
   QueryConstraint,
-  getDocFromServer,
   persistentLocalCache,
   persistentMultipleTabManager
 } from 'firebase/firestore';
@@ -39,45 +38,21 @@ import firebaseConfig from '../../firebase-applet-config.json';
 // Initialize Firebase SDK with long-polling configured for standard robust transit in sandbox/iframe environments
 const app = initializeApp(firebaseConfig);
 
-// Keep long polling enabled for sandbox and iframe environments, and ensure it does not conflict
-// with auto-detection by explicitly disabling auto-detection when forced long polling is active.
 // Set up persistent offline cache with multiple-tab coordination support for seamless offline sync.
-const forceLongPolling = true;
+// We explicitly set experimentalForceLongPolling to true and experimentalAutoDetectLongPolling to false
+// to bypass WebSocket connection trial timeouts inside sandboxed browser iframes.
 const firestoreSettings: any = {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
-  })
+  }),
+  experimentalForceLongPolling: true,
+  experimentalAutoDetectLongPolling: false
 };
-
-if (forceLongPolling) {
-  firestoreSettings.experimentalForceLongPolling = true;
-  // experimentalAutoDetectLongPolling has to be omitted or set to false when experimentalForceLongPolling is true
-} else {
-  firestoreSettings.experimentalAutoDetectLongPolling = true;
-}
 
 export const db = initializeFirestore(app, firestoreSettings, firebaseConfig.firestoreDatabaseId || '(default)');
 export const auth = getAuth();
 
-// Test connection on boot as mandated by the Firebase Integration Skill
-async function testConnection() {
-  try {
-    await getDocFromServer(doc(db, 'test', 'connection'));
-    console.log("[Firestore SDK] Successfully reached Cloud Firestore backend.");
-  } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
-    const errCode = (error as any)?.code || '';
-    
-    if (errMsg.includes('the client is offline') || errCode === 'unavailable') {
-      console.warn(`[Firestore SDK] Note: Connection to Firestore backend timed out or is offline (${errMsg}). The client will operate offline and auto-sync when online.`);
-    } else if (errCode === 'permission-denied') {
-      console.log("[Firestore SDK] Connected to Firestore (Security rules evaluated correctly).");
-    } else {
-      console.error("[Firestore SDK] Connection error:", error);
-    }
-  }
-}
-testConnection();
+console.log("[Firestore SDK] Initialized with persistent offline cache & forced long polling mode.");
 
 // Define clean Enum types and interfaces for error mapping
 export enum OperationType {

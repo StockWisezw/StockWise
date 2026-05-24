@@ -46,8 +46,12 @@ const navigation = [
 ];
 
 function SubscriptionBanner() {
-  // In a real implementation this would come from the database
-  const subscriptionStatus: string = 'GRACE_PERIOD'; // Active, Trial, Grace_Period, Expired
+  const { user } = useAuth();
+  
+  // Superadmin account has no expiration and unlimited functions
+  const isSuperadmin = user?.email === 'demo@tareza.co.zw';
+  const subscriptionStatus: string = isSuperadmin ? 'ACTIVE' : 'GRACE_PERIOD';
+  
   const expiresAt = new Date(Date.now() - 2 * 24 * 60 * 60 * 1000); // Expired 2 days ago
   const gracePeriodEnd = new Date(expiresAt.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days grace
   const daysLeftInGrace = Math.floor((gracePeriodEnd.getTime() - Date.now()) / (1000 * 60 * 60 * 24));

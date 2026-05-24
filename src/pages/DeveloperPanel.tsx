@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, LogOut, CheckCircle, XCircle, Mail, MessageSquare, AlertCircle } from 'lucide-react';
+import { 
+  ShieldCheck, 
+  LogOut, 
+  CheckCircle, 
+  XCircle, 
+  Mail, 
+  MessageSquare, 
+  AlertCircle, 
+  Database, 
+  RefreshCw, 
+  FileJson, 
+  DownloadCloud 
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
@@ -8,6 +20,7 @@ import { Badge } from '../components/ui/badge';
 import { ThemeToggle } from '../components/ThemeToggle';
 import { appwrite } from '../lib/appwrite';
 import { toast } from 'sonner';
+import firebaseConfig from '../../firebase-applet-config.json';
 
 export default function DeveloperPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -17,13 +30,52 @@ export default function DeveloperPanel() {
   const [businesses, setBusinesses] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
+  // Database backups states
+  const [backupLogs, setBackupLogs] = useState<any[]>([]);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [triggeringBackup, setTriggeringBackup] = useState(false);
+
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     if (email === 'admin@tarezaerp.co.zw' && password === 'taps1302??') {
       setIsAuthenticated(true);
       fetchBusinesses();
+      fetchBackupLogs();
     } else {
       toast.error("Invalid credentials.");
+    }
+  };
+
+  const fetchBackupLogs = async () => {
+    setBackupLoading(true);
+    try {
+      const response = await fetch('/api/admin/backups/logs');
+      const data = await response.json();
+      if (data.success) {
+        setBackupLogs(data.logs || []);
+      }
+    } catch (err: any) {
+      console.error("Failed to load backup logs:", err);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const handleTriggerBackup = async () => {
+    setTriggeringBackup(true);
+    try {
+      const response = await fetch('/api/admin/backups/run', { method: 'POST' });
+      const data = await response.json();
+      if (data.success) {
+        toast.success(`Success! Ledger data backed up to: ${data.filename}`);
+        fetchBackupLogs();
+      } else {
+        toast.error(`Backup failed: ${data.error}`);
+      }
+    } catch (err: any) {
+      toast.error(`Failed to trigger backup: ${err.message}`);
+    } finally {
+      setTriggeringBackup(false);
     }
   };
 
@@ -202,6 +254,134 @@ export default function DeveloperPanel() {
                </div>
             </CardContent>
           </Card>
+
+          {/* Automated System Backup Panel */}
+          <Card className="md:col-span-2 font-sans bg-white dark:bg-zinc-900 border-zinc-200">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0 pb-4 border-b border-zinc-100 dark:border-zinc-800">
+              <div className="space-y-1">
+                <CardTitle className="text-lg font-bold flex items-center gap-2">
+                  <Database className="w-5 h-5 text-indigo-500 animate-pulse" />
+                  Ledger Database Backups
+                </CardTitle>
+                <CardDescription className="text-zinc-500 text-xs">
+                  Automated daily JSON backups of Chart of Accounts, Journal Entries, Journal Lines, register sessions, and corporate Audit Logs.
+                </CardDescription>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={fetchBackupLogs}
+                  disabled={backupLoading}
+                  className="text-xs h-9 cursor-pointer"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 mr-1.5 ${backupLoading ? 'animate-spin' : ''}`} />
+                  Refresh
+                </Button>
+                <Button 
+                  size="sm"
+                  onClick={handleTriggerBackup}
+                  disabled={triggeringBackup}
+                  className="text-xs h-9 bg-zinc-900 text-white hover:bg-zinc-805 border-zinc-950 cursor-pointer"
+                >
+                  <DownloadCloud className="w-3.5 h-3.5 mr-1.5" />
+                  {triggeringBackup ? 'Backing up...' : 'Trigger Manual Backup'}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="mb-6 p-4 rounded-xl border border-dashed border-emerald-500/20 bg-emerald-50/50 dark:bg-emerald-950/10 flex items-start gap-3">
+                <CheckCircle className="w-5 h-5 text-emerald-600 dark:text-emerald-400 mt-0.5" />
+                <div className="space-y-1">
+                  <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs">Scheduled Backup Status: Active</h4>
+                  <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed">
+                    The background cron-scheduler is registered and actively triggers daily at <strong>01:00 UTC</strong>. Files are persisted to your secure cloud bucket: <code>gs://{firebaseConfig.storageBucket}/backups/</code> with a 30-day auto-retention policy.
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <h4 className="font-bold text-xs uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono">
+                  Backup Execution History Log
+                </h4>
+                
+                {backupLoading && backupLogs.length === 0 ? (
+                  <div className="py-6 text-center text-xs text-zinc-500 dark:text-zinc-400 font-sans">
+                    <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-indigo-505" />
+                    Fetching system catalog...
+                  </div>
+                ) : backupLogs.length === 0 ? (
+                  <div className="py-8 text-center text-xs text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-800 rounded-xl bg-zinc-50/30 font-sans">
+                    No historical backups logged yet. Click "Trigger Manual Backup" above to run your baseline snapshot.
+                  </div>
+                ) : (
+                  <div className="border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden font-sans">
+                    <Table>
+                      <TableHeader className="bg-zinc-50/50 dark:bg-zinc-800/20">
+                        <TableRow>
+                          <TableHead className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Execution Date (UTC)</TableHead>
+                          <TableHead className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Filename / Storage Object</TableHead>
+                          <TableHead className="text-xs font-bold text-zinc-700 dark:text-zinc-300">Scope Summary</TableHead>
+                          <TableHead className="text-xs font-bold text-zinc-700 dark:text-zinc-300">File Size</TableHead>
+                          <TableHead className="text-xs font-bold text-zinc-700 dark:text-zinc-300 text-right">Status</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody className="text-xs">
+                        {backupLogs.map((log) => (
+                          <TableRow key={log.id}>
+                            <TableCell className="font-medium whitespace-nowrap text-zinc-900 dark:text-zinc-100 font-mono">
+                              {new Date(log.timestamp).toLocaleString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                              })}
+                            </TableCell>
+                            <TableCell className="text-zinc-600 dark:text-zinc-400 font-mono max-w-xs truncate" title={log.filename}>
+                              {log.filename}
+                            </TableCell>
+                            <TableCell className="text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                              {log.status === 'SUCCESS' ? (
+                                <span className="inline-flex flex-wrap gap-1 font-mono text-[10px]">
+                                  <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded">accts: {log.accounts_count ?? 0}</span>
+                                  <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono">jes: {log.journal_entries_count ?? 0}</span>
+                                  <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono">jls: {log.journal_lines_count ?? 0}</span>
+                                  <span className="bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-mono">shifts: {log.register_sessions_count ?? 0}</span>
+                                </span>
+                              ) : (
+                                <span className="text-rose-600 font-mono text-[10px] truncate max-w-[200px]" title={log.error}>
+                                  Err: {log.error || 'Direct Exception'}
+                                </span>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-zinc-650 dark:text-zinc-350 font-mono whitespace-nowrap">
+                              {log.size_bytes ? `${(log.size_bytes / 1024).toFixed(2)} KB` : 'N/A'}
+                            </TableCell>
+                            <TableCell className="text-right whitespace-nowrap">
+                              <Badge 
+                                variant="default"
+                                className={
+                                  log.status === 'SUCCESS' 
+                                    ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/20 dark:text-emerald-400 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-900/40 uppercase text-[10px] font-bold shadow-none' 
+                                    : 'bg-rose-50 text-rose-700 dark:bg-rose-950/20 dark:text-rose-450 hover:bg-rose-50 border border-rose-250 dark:border-rose-900/40 uppercase text-[10px] font-bold shadow-none'
+                                }
+                              >
+                                {log.status}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
           <Card className="md:col-span-2">
             <CardHeader>
               <CardTitle>Licensing & Billing Setup</CardTitle>
