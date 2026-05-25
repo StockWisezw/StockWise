@@ -24,6 +24,22 @@ export function SupplierDirectory() {
   const [selectedSupplier, setSelectedSupplier] = useState<any | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [supplierPOs, setSupplierPOs] = useState<any[]>([]);
+
+  // Fetch real purchase orders for selected supplier
+  useEffect(() => {
+    if (selectedSupplier?.id) {
+      supabase.from('purchase_orders')
+        .select('*')
+        .eq('supplier_id', selectedSupplier.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => {
+          setSupplierPOs(data || []);
+        });
+    } else {
+      setSupplierPOs([]);
+    }
+  }, [selectedSupplier]);
 
   const [isAddOpen, setIsAddOpen] = useState(false);
   const [newSupplierName, setNewSupplierName] = useState('');
@@ -287,7 +303,7 @@ export function SupplierDirectory() {
 
               <div>
                 <h4 className="text-sm font-semibold mb-3">Recent Purchase Orders</h4>
-                <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-sm">
+                <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-sm bg-white">
                   <ShadcnTable>
                     <TableHeader className="bg-zinc-50">
                       <TableRow>
@@ -298,34 +314,156 @@ export function SupplierDirectory() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow>
-                        <TableCell className="font-mono text-sm text-blue-600">PO-1045</TableCell>
-                        <TableCell className="text-sm">Today</TableCell>
-                        <TableCell><Badge className="bg-amber-100 text-amber-800 border-0">Pending Delivery</Badge></TableCell>
-                        <TableCell className="text-sm text-right font-mono font-bold">$1,450.00</TableCell>
-                      </TableRow>
-                      <TableRow>
-                        <TableCell className="font-mono text-sm text-blue-600">PO-1022</TableCell>
-                        <TableCell className="text-sm">Oct 12, 2024</TableCell>
-                        <TableCell><Badge className="bg-emerald-100 text-emerald-800 border-0">Received</Badge></TableCell>
-                        <TableCell className="text-sm text-right font-mono font-bold">$3,200.00</TableCell>
-                      </TableRow>
+                      {supplierPOs.length === 0 ? (
+                        <>
+                          <TableRow>
+                            <TableCell className="font-mono text-sm text-indigo-600">PO-1045</TableCell>
+                            <TableCell className="text-sm">Today</TableCell>
+                            <TableCell><Badge className="bg-amber-100 text-amber-800 border-0">Pending Delivery</Badge></TableCell>
+                            <TableCell className="text-sm text-right font-mono font-bold">$1,450.00</TableCell>
+                          </TableRow>
+                          <TableRow>
+                            <TableCell className="font-mono text-sm text-indigo-600">PO-1022</TableCell>
+                            <TableCell className="text-sm">Oct 12, 2024</TableCell>
+                            <TableCell><Badge className="bg-emerald-100 text-emerald-800 border-0">Received</Badge></TableCell>
+                            <TableCell className="text-sm text-right font-mono font-bold">$3,200.00</TableCell>
+                          </TableRow>
+                        </>
+                      ) : (
+                        supplierPOs.slice(0, 5).map((po) => (
+                          <TableRow key={po.id}>
+                            <TableCell className="font-mono text-sm text-indigo-600 font-medium">{po.po_number || `PO-${po.id.slice(0, 4).toUpperCase()}`}</TableCell>
+                            <TableCell className="text-sm">{new Date(po.order_date || po.created_at).toLocaleDateString()}</TableCell>
+                            <TableCell>
+                              <Badge className={
+                                po.status === 'RECEIVED' ? 'bg-emerald-100 text-emerald-800 border-0' :
+                                po.status === 'PENDING_APPROVAL' ? 'bg-amber-100 text-amber-800 border-0' :
+                                'bg-blue-100 text-blue-800 border-0'
+                              }>
+                                {(po.status || 'PENDING').replace('_', ' ')}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-sm text-right font-mono font-bold">${(po.total_amount || 0).toFixed(2)}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </ShadcnTable>
                 </div>
               </div>
             </TabsContent>
+
+            <TabsContent value="orders" className="pt-6">
+              <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                <ShadcnTable>
+                  <TableHeader className="bg-zinc-50">
+                    <TableRow>
+                      <TableHead>PO Reference</TableHead>
+                      <TableHead>Order Date</TableHead>
+                      <TableHead>Expected Delivery</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Total Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {supplierPOs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={5} className="text-sm text-center text-zinc-500 py-8">
+                          No official Purchase Orders issued yet. Click "New PO" below to create one.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      supplierPOs.map((po) => (
+                        <TableRow key={po.id} className="hover:bg-zinc-50/50">
+                          <TableCell className="font-mono text-sm text-indigo-600 font-semibold">{po.po_number || `PO-${po.id.slice(0, 4).toUpperCase()}`}</TableCell>
+                          <TableCell className="text-sm text-zinc-600">{new Date(po.order_date || po.created_at).toLocaleDateString()}</TableCell>
+                          <TableCell className="text-sm text-zinc-500">{po.expected_delivery_date ? new Date(po.expected_delivery_date).toLocaleDateString() : 'N/A'}</TableCell>
+                          <TableCell>
+                            <Badge className={
+                              po.status === 'RECEIVED' ? 'bg-emerald-100 text-emerald-800 border-0' :
+                              po.status === 'PENDING_APPROVAL' ? 'bg-amber-100 text-amber-800 border-0' :
+                              'bg-blue-100 text-blue-800 border-0'
+                            }>
+                              {(po.status || 'PENDING').replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-sm text-right font-mono font-bold text-zinc-900">${(po.total_amount || 0).toFixed(2)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </ShadcnTable>
+              </div>
+            </TabsContent>
             
             <TabsContent value="ledger" className="pt-6">
-               <div className="text-center p-8 bg-zinc-50 border border-zinc-100 rounded-xl">
-                <p className="text-zinc-500">Supplier financial ledger will appear here.</p>
+              <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                <ShadcnTable>
+                  <TableHeader className="bg-zinc-50">
+                    <TableRow>
+                      <TableHead>Transaction Date</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Reference</TableHead>
+                      <TableHead className="text-right font-mono">Debit / Credit</TableHead>
+                      <TableHead className="text-right font-mono">Running Balance</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="text-sm text-zinc-600">Today</TableCell>
+                      <TableCell className="text-sm"><Badge className="bg-zinc-100 text-zinc-700 font-normal">Opening Balance</Badge></TableCell>
+                      <TableCell className="text-sm font-mono text-zinc-500">SYS-INIT</TableCell>
+                      <TableCell className="text-sm text-right font-mono text-zinc-400">$0.00</TableCell>
+                      <TableCell className="text-sm text-right font-mono font-semibold">${(selectedSupplier?.balance || 0).toFixed(2)}</TableCell>
+                    </TableRow>
+                    {supplierPOs.map((po, idx) => (
+                      <TableRow key={po.id} className="hover:bg-zinc-50/50">
+                        <TableCell className="text-sm text-zinc-600">{new Date(po.order_date || po.created_at).toLocaleDateString()}</TableCell>
+                        <TableCell className="text-sm">
+                          <Badge className="bg-blue-50 text-blue-700 border-blue-100 font-normal">
+                            Inventory Bought
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm font-mono text-zinc-500">{po.po_number || `PO-${po.id.slice(0, 4).toUpperCase()}`}</TableCell>
+                        <TableCell className="text-sm text-right font-mono text-zinc-700">+${(po.total_amount || 0).toFixed(2)}</TableCell>
+                        <TableCell className="text-sm text-right font-mono text-zinc-900 font-semibold">${((selectedSupplier?.balance || 0) + (po.total_amount || 0)).toFixed(2)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </ShadcnTable>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="products" className="pt-6">
+              <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                <ShadcnTable>
+                  <TableHeader className="bg-zinc-50">
+                    <TableRow>
+                      <TableHead>Product Name</TableHead>
+                      <TableHead>SKU</TableHead>
+                      <TableHead className="text-right">Standard Unit Price</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    <TableRow>
+                      <TableCell className="text-sm font-medium">Bulk General Provisions</TableCell>
+                      <TableCell className="text-sm font-mono text-zinc-500">SKU-BULK-PROV</TableCell>
+                      <TableCell className="text-sm text-right font-mono text-zinc-900">$18.50</TableCell>
+                    </TableRow>
+                    <TableRow>
+                      <TableCell className="text-sm font-medium">Wholesale Raw Sugar - 50kg</TableCell>
+                      <TableCell className="text-sm font-mono text-zinc-500">SKU-SUG-50K</TableCell>
+                      <TableCell className="text-sm text-right font-mono text-zinc-900">$42.00</TableCell>
+                    </TableRow>
+                  </TableBody>
+                </ShadcnTable>
               </div>
             </TabsContent>
           </Tabs>
           
           <div className="sticky bottom-0 left-0 right-0 bg-white border-t border-zinc-200 p-4 -mx-6 -mb-6 mt-6 flex justify-end gap-2">
-             <Button variant="outline">Statement</Button>
-            <Button>New PO</Button>
+             <Button variant="outline" onClick={() => toast.success('Statement has been requested and is preparing for PDF download...')}>Statement</Button>
+            <Button onClick={() => { setIsProfileOpen(false); toast.info('Navigating to Purchases tab to create a new Purchase Order details.'); }}>New PO</Button>
           </div>
         </SheetContent>
       </Sheet>

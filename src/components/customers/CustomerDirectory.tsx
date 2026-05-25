@@ -27,6 +27,22 @@ export function CustomerDirectory() {
   const [selectedCustomer, setSelectedCustomer] = useState<any>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  const [customerSales, setCustomerSales] = useState<any[]>([]);
+  
+  // Fetch real sales history for selected customer
+  useEffect(() => {
+    if (selectedCustomer?.id) {
+      supabase.from('sales')
+        .select('*')
+        .eq('customer_id', selectedCustomer.id)
+        .order('created_at', { ascending: false })
+        .then(({ data }) => {
+          setCustomerSales(data || []);
+        });
+    } else {
+      setCustomerSales([]);
+    }
+  }, [selectedCustomer]);
   
   // New Customer Form State
   const [newCustomerName, setNewCustomerName] = useState('');
@@ -352,14 +368,30 @@ export function CustomerDirectory() {
                     <TableHeader className="bg-zinc-50">
                       <TableRow>
                          <TableHead>Date</TableHead>
-                         <TableHead>Type</TableHead>
+                         <TableHead>Receipt / Reference</TableHead>
                          <TableHead className="text-right">Amount</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      <TableRow>
-                         <TableCell colSpan={3} className="text-sm text-center text-zinc-500">No recent transactions.</TableCell>
-                      </TableRow>
+                      {customerSales.length === 0 ? (
+                        <TableRow>
+                           <TableCell colSpan={3} className="text-sm text-center text-zinc-500 py-4">No recent transactions.</TableCell>
+                        </TableRow>
+                      ) : (
+                        customerSales.slice(0, 5).map((sale) => (
+                          <TableRow key={sale.id}>
+                            <TableCell className="text-xs text-zinc-600">
+                              {new Date(sale.created_at || sale.timestamp).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell className="text-xs font-mono font-medium text-indigo-600">
+                              {sale.receiptNumber || `REC-${sale.id.slice(0, 4).toUpperCase()}`}
+                            </TableCell>
+                            <TableCell className="text-xs text-right font-mono font-bold text-zinc-900">
+                              ${(sale.total || sale.total_amount || 0).toFixed(2)}
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
                     </TableBody>
                   </ShadcnTable>
                 </div>
@@ -367,8 +399,43 @@ export function CustomerDirectory() {
             </TabsContent>
             
             <TabsContent value="history" className="pt-6">
-              <div className="text-center p-8 bg-zinc-50 border border-zinc-100 rounded-xl">
-                <p className="text-zinc-500">Full purchase history will appear here.</p>
+              <div className="border border-zinc-200 rounded-xl overflow-hidden shadow-sm bg-white">
+                <ShadcnTable>
+                  <TableHeader className="bg-zinc-50">
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Receipt / Reference</TableHead>
+                      <TableHead>Method</TableHead>
+                      <TableHead className="text-right">Total Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {customerSales.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-sm text-center text-zinc-500 py-8">
+                          No transaction records found for this customer.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      customerSales.map((sale) => (
+                        <TableRow key={sale.id} className="hover:bg-zinc-50/50">
+                          <TableCell className="text-sm text-zinc-600">
+                            {new Date(sale.created_at || sale.timestamp).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell className="text-sm font-mono font-medium text-indigo-600">
+                            {sale.receiptNumber || `REC-${sale.id.slice(0, 4).toUpperCase()}`}
+                          </TableCell>
+                          <TableCell className="text-sm text-zinc-500 capitalize">
+                            {sale.payment_method || 'Multiple'}
+                          </TableCell>
+                          <TableCell className="text-sm text-right font-mono font-bold text-zinc-900">
+                            ${(sale.total || sale.total_amount || 0).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </ShadcnTable>
               </div>
             </TabsContent>
           </Tabs>
