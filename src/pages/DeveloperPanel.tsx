@@ -18,9 +18,10 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
 import { ThemeToggle } from '../components/ThemeToggle';
-import { appwrite } from '../lib/appwrite';
+import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
-import firebaseConfig from '../../firebase-applet-config.json';
+
+const supabaseConfig = { storageBucket: 'tareza-backups' };
 
 export default function DeveloperPanel() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -85,7 +86,7 @@ export default function DeveloperPanel() {
       // Need to fetch all businesses for dev. 
       // This bypasses RLS if using service role, but since it's client side, we need standard fetch.
       // If RLS prevents it, this might return empty. I will add a fallback mock if it fails.
-      const { data, error } = await appwrite.from('businesses').select('*');
+      const { data, error } = await supabase.from('businesses').select('*');
       if (error) {
         throw error;
       }
@@ -101,7 +102,7 @@ export default function DeveloperPanel() {
   const toggleSubscription = async (businessId: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'past_due' : 'active';
     try {
-      const { error } = await appwrite
+      const { error } = await supabase
         .from('subscriptions')
         .update({ status: newStatus })
         .eq('business_id', businessId);
@@ -295,7 +296,7 @@ export default function DeveloperPanel() {
                 <div className="space-y-1">
                   <h4 className="font-semibold text-zinc-900 dark:text-zinc-100 text-xs">Scheduled Backup Status: Active</h4>
                   <p className="text-zinc-500 dark:text-zinc-400 text-[11px] leading-relaxed">
-                    The background cron-scheduler is registered and actively triggers daily at <strong>01:00 UTC</strong>. Files are persisted to your secure cloud bucket: <code>gs://{firebaseConfig.storageBucket}/backups/</code> with a 30-day auto-retention policy.
+                    The background cron-scheduler is registered and actively triggers daily at <strong>01:00 UTC</strong>. Files are persisted to your secure cloud storage bucket: <code>supabase://{supabaseConfig.storageBucket}/backups/</code> with a 30-day auto-retention policy.
                   </p>
                 </div>
               </div>
@@ -403,22 +404,24 @@ export default function DeveloperPanel() {
                      
                      <h4 className="font-bold text-zinc-900 dark:text-zinc-50 mb-2">2. Implement Webhook Endpoint</h4>
                      <p className="mb-2">
-                       Set up a serverless function (e.g., using Firebase Cloud Functions) to map payment events back to the database:
+                       Set up a serverless function (e.g., using Supabase Edge Functions) to map payment events back to the database:
                      </p>
                      <pre className="bg-zinc-950 p-3 rounded-md text-xs text-green-400 overflow-x-auto">
-{`// Firebase Cloud Function to handle Paynow/Stripe Webhook
-import { getFirestore } from 'firebase-admin/firestore'
+{`// Supabase Edge Function to handle Paynow/Stripe Webhook
+import { createClient } from '@supabase/supabase-js'
 
-export async function handlePaymentWebhook(req) {
+const supabase = createClient(Deno.env.get('SUPABASE_URL'), Deno.env.get('SUPABASE_SERVICE_ROLE_KEY'))
+
+Deno.serve(async (req) => {
   const { business_id, status } = await req.json()
-  const db = getFirestore()
   
-  if(status === 'PAID') {
-    await db.collection('businesses')
-      .doc(business_id)
+  if (status === 'PAID') {
+    await supabase.from('businesses')
       .update({ subscription_status: 'ACTIVE' })
+      .eq('id', business_id)
   }
-}`}
+  return new Response(JSON.stringify({ success: true }), { headers: { "Content-Type": "application/json" } })
+})`}
                      </pre>
                   </div>
                   

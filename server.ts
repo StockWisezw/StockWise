@@ -24,24 +24,15 @@ async function startServer() {
 
   app.get("/api/admin/backups/logs", async (req, res) => {
     try {
-      const admin = (await import('firebase-admin')).default;
-      const { getFirestore } = await import('firebase-admin/firestore');
-      const firebaseConfig = (await import('./firebase-applet-config.json')).default;
-      const app = admin.apps[0] || admin.initializeApp({
-        projectId: firebaseConfig.projectId,
-        storageBucket: firebaseConfig.storageBucket
-      });
-      const db = getFirestore(app, firebaseConfig.firestoreDatabaseId || undefined);
+      const { supabase } = await import("./server/supabase");
+      const { data, error } = await supabase
+        .from("backup_logs")
+        .select("*")
+        .order("timestamp", { ascending: false })
+        .limit(50);
         
-      const snap = await db.collection('backup_logs').orderBy('timestamp', 'desc').limit(50).get();
-      const logs: any[] = [];
-      snap.forEach(docSnap => {
-        logs.push({
-          id: docSnap.id,
-          ...docSnap.data()
-        });
-      });
-      res.json({ success: true, logs });
+      if (error) throw error;
+      res.json({ success: true, logs: data || [] });
     } catch (err: any) {
       res.status(500).json({ success: false, error: err.message || String(err) });
     }

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState, useEffect, createContext, useContext } from 'react';
-import { account } from '../lib/appwrite';
-import { Models } from 'appwrite';
+import { account } from '../lib/supabaseClient';
+import { Models } from '@/lib/supabaseClient';
 
 type AuthContextType = {
   user: Models.User<Models.Preferences> | null;

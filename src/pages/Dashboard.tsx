@@ -2,7 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../co
 import { Activity, CreditCard, DollarSign, Package, Sparkles } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { useEffect, useState } from 'react';
-import { appwrite } from '../lib/appwrite';
+import { supabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
 import { useTheme } from 'next-themes';
 
@@ -20,9 +20,9 @@ export default function Dashboard() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const { data: salesInfo } = await appwrite.from('sales').select('total_amount, created_at');
-        const { count: branchesCount } = await appwrite.from('branches').select('*', { count: 'exact', head: true });
-        const { count: lowStockCount } = await appwrite.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true);
+        const { data: salesInfo } = await supabase.from('sales').select('total_amount, created_at');
+        const { count: branchesCount } = await supabase.from('branches').select('*', { count: 'exact', head: true });
+        const { count: lowStockCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true);
         // Note: lowStock should actually be based on quantity, but we'll leave it as a placeholder.
         
         let realSales = 0;
@@ -91,20 +91,20 @@ export default function Dashboard() {
   useEffect(() => {
     async function ensureBusinessProfile() {
       try {
-        const { data: userData, error: userError } = await appwrite.auth.getUser();
+        const { data: userData, error: userError } = await supabase.auth.getUser();
         if (userError || !userData?.user) {
           setLoading(false);
           return;
         }
 
-        const { data: businessData, error: businessError } = await appwrite
+        const { data: businessData, error: businessError } = await supabase
           .from('business_users')
           .select('business_id')
           .eq('user_id', userData.user.id)
           .limit(1)
           .maybeSingle();
 
-        const { data: profile } = await appwrite.from('profiles').select('first_name').eq('id', userData.user.id).limit(1).maybeSingle();
+        const { data: profile } = await supabase.from('profiles').select('first_name').eq('id', userData.user.id).limit(1).maybeSingle();
         if (profile?.first_name) {
           setProfileName(profile.first_name);
         }
@@ -114,7 +114,7 @@ export default function Dashboard() {
           
           // Check if profile exists
           try {
-            await appwrite.from('profiles').upsert({ 
+            await supabase.from('profiles').upsert({ 
               id: userData.user.id, 
               first_name: 'Default', 
               last_name: 'User',
@@ -124,19 +124,19 @@ export default function Dashboard() {
           } catch(e) {}
           
           // Create business
-          const { data: bData, error: bErr } = await appwrite.from('businesses').insert({ name: 'My Business' }).select().single();
+          const { data: bData, error: bErr } = await supabase.from('businesses').insert({ name: 'My Business' }).select().single();
           if (bErr || !bData) throw bErr || new Error("Failed to create business");
           
           // Create role
-          const { data: rData, error: rErr } = await appwrite.from('roles').insert({ business_id: bData.id, name: 'Admin', description: 'System Administrator' }).select().single();
+          const { data: rData, error: rErr } = await supabase.from('roles').insert({ business_id: bData.id, name: 'Admin', description: 'System Administrator' }).select().single();
           if (rErr || !rData) throw rErr || new Error("Failed to create role");
 
           // Create branch
-          const { data: brData, error: brErr } = await appwrite.from('branches').insert({ business_id: bData.id, name: 'Main Branch', type: 'retail' }).select().single();
+          const { data: brData, error: brErr } = await supabase.from('branches').insert({ business_id: bData.id, name: 'Main Branch', type: 'retail' }).select().single();
           if (brErr || !brData) throw brErr || new Error("Failed to create branch");
 
           // Link user
-          const { error: buErr } = await appwrite.from('business_users').insert({
+          const { error: buErr } = await supabase.from('business_users').insert({
             business_id: bData.id,
             user_id: userData.user.id,
             branch_id: brData.id,
@@ -145,10 +145,10 @@ export default function Dashboard() {
           if (buErr) throw buErr;
 
           // Default category
-          await appwrite.from('categories').insert({ business_id: bData.id, name: 'General' });
+          await supabase.from('categories').insert({ business_id: bData.id, name: 'General' });
 
           // Free trial sub
-          await appwrite.from('subscriptions').insert({ business_id: bData.id, plan_name: 'free_trial', status: 'active' });
+          await supabase.from('subscriptions').insert({ business_id: bData.id, plan_name: 'free_trial', status: 'active' });
           
           toast.success('Your business profile has been initialized.');
         }

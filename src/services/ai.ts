@@ -1,5 +1,5 @@
 // AI services file connecting to local agent AI routes
-import { appwrite } from '../lib/appwrite';
+import { supabase } from '../lib/supabaseClient';
 
 // AI Insights for Inventory
 export const generateInventoryInsights = async (inventoryData: any) => {

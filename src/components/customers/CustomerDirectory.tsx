@@ -17,7 +17,7 @@ import {
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger, SheetDescription } from '../ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
-import { appwrite } from '../../lib/appwrite';
+import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 
 export function CustomerDirectory() {
@@ -36,7 +36,7 @@ export function CustomerDirectory() {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await appwrite
+      const { data, error } = await supabase
         .from('customers')
         .select('*')
         .order('name');
@@ -64,7 +64,7 @@ export function CustomerDirectory() {
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await appwrite.from('customers').delete().eq('id', id);
+      const { error } = await supabase.from('customers').delete().eq('id', id);
       if (error) throw error;
       toast.success("Customer deleted successfully");
       setIsProfileOpen(false);
@@ -99,10 +99,10 @@ export function CustomerDirectory() {
       return;
     }
     try {
-       const { data: userData } = await appwrite.auth.getUser();
+       const { data: userData } = await supabase.auth.getUser();
        if (!userData?.user) throw new Error("Not authenticated");
 
-       const { data: businessData, error: businessError } = await appwrite
+       const { data: businessData, error: businessError } = await supabase
          .from('business_users')
          .select('business_id')
          .eq('user_id', userData.user.id)
@@ -114,7 +114,7 @@ export function CustomerDirectory() {
          return;
        }
 
-      const { data, error } = await appwrite.from('customers').insert({
+      const { data, error } = await supabase.from('customers').insert({
         business_id: businessData.business_id,
         name: newCustomerName,
         email: newCustomerEmail,

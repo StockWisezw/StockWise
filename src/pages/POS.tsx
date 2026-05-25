@@ -33,8 +33,7 @@ import {
   logAuditEvent
 } from '../services/ledgerService';
 
-import { db } from '../lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db, doc, getDoc, updateDoc } from '../lib/supabaseClient';
 
 export default function POS() {
   const navigate = useNavigate();
@@ -76,7 +75,7 @@ export default function POS() {
   const receiptRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Fetch products and customers from Appwrite with IndexedDB offline-first logic
+  // Fetch products and customers from Supabase with IndexedDB offline-first logic
   useEffect(() => {
     let unsubscribeProducts: any = null;
     
@@ -105,7 +104,7 @@ export default function POS() {
 
         // 1.5 Recover open register session
         try {
-          const { appwrite: appService } = await import('../lib/appwrite');
+          const { supabase: appService } = await import('../lib/supabaseClient');
           const { data: userContext } = await appService.auth.getUser();
           if (userContext?.user) {
             const { data: userBusiness } = await appService.from('business_users').select('business_id').eq('user_id', userContext.user.id).limit(1).maybeSingle();
@@ -123,7 +122,7 @@ export default function POS() {
         }
 
         // 2. Refresh from Server
-        const { appwrite } = await import('../lib/appwrite');
+        const { supabase } = await import('../lib/supabaseClient');
         
         let productsData: any[] = [];
         let customersData: any[] = [];
@@ -131,8 +130,8 @@ export default function POS() {
         
         try {
           const [custRes, catRes] = await Promise.all([
-            appwrite.from('customers').select('*'),
-            appwrite.from('categories').select('*')
+            supabase.from('customers').select('*'),
+            supabase.from('categories').select('*')
           ]);
           
           customersData = custRes.data || [];
@@ -149,11 +148,11 @@ export default function POS() {
           }
           
           // Setup realtime subscription for products
-          const channel = appwrite.channel('public:products')
+          const channel = supabase.channel('public:products')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, payload => {
                Promise.all([
-                 appwrite.from('products').select('*'),
-                 Promise.resolve(appwrite.from('inventory').select('*')).catch(() => ({ data: [] }))
+                 supabase.from('products').select('*'),
+                 Promise.resolve(supabase.from('inventory').select('*')).catch(() => ({ data: [] }))
                ]).then(([pRes, iRes]) => {
                   const data = pRes.data || [];
                   const invData = iRes.data || [];
@@ -185,13 +184,13 @@ export default function POS() {
             .subscribe();
             
           unsubscribeProducts = () => {
-            appwrite.removeChannel(channel);
+            supabase.removeChannel(channel);
           };
 
-          // Initial load from Appwrite / local storage resolution
+          // Initial load from Supabase / local storage resolution
           const [productsRes, inventoryRes] = await Promise.all([
-             appwrite.from('products').select('*'),
-             Promise.resolve(appwrite.from('inventory').select('*')).catch(() => ({ data: [] }))
+             supabase.from('products').select('*'),
+             Promise.resolve(supabase.from('inventory').select('*')).catch(() => ({ data: [] }))
           ]);
           
           const initProducts = productsRes.data || [];
@@ -315,13 +314,13 @@ export default function POS() {
       shouldPrintRef.current = true;
       
       try {
-        const { appwrite } = await import('../lib/appwrite');
+        const { supabase } = await import('../lib/supabaseClient');
 
-        const { data: userData } = await appwrite.auth.getUser();
+        const { data: userData } = await supabase.auth.getUser();
         let businessId = 'default_business';
         let branchId = 'default_branch';
         if (userData?.user) {
-          const { data: businessData } = await appwrite.from('business_users').select('business_id, branch_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
+          const { data: businessData } = await supabase.from('business_users').select('business_id, branch_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
           if (businessData?.business_id) businessId = businessData.business_id;
           if (businessData?.branch_id) branchId = businessData.branch_id;
         }
@@ -339,7 +338,7 @@ export default function POS() {
         if (businessId) salePayload.business_id = businessId;
         if (sale.customerId) salePayload.customer_id = sale.customerId;
 
-        const { data: saleDoc, error: saleErr } = await appwrite.from('sales').insert([salePayload]).select().single();
+        const { data: saleDoc, error: saleErr } = await supabase.from('sales').insert([salePayload]).select().single();
 
         if (saleDoc) {
           // 1. Log sale items and update real-time stock levels with matching double-entry COGS
@@ -352,7 +351,7 @@ export default function POS() {
               line_total: item.subtotal,
               vat_amount: item.vatAmount
             }));
-            await appwrite.from('sale_items').insert(itemsPayload);
+            await supabase.from('sale_items').insert(itemsPayload);
 
             for (const item of sale.items) {
               await recordStockMovement(
@@ -411,17 +410,17 @@ export default function POS() {
 
           // 4. Update Customer credit balance if credit purchase
           if (creditPayment && sale.customerId) {
-            const { data: custData } = await appwrite.from('customers').select('*').eq('id', sale.customerId).single();
+            const { data: custData } = await supabase.from('customers').select('*').eq('id', sale.customerId).single();
             if (custData) {
               const newBalance = Number(custData.balance || 0) + creditPayment.amount;
-              await appwrite.from('customers').update({ balance: newBalance }).eq('id', sale.customerId);
+              await supabase.from('customers').update({ balance: newBalance }).eq('id', sale.customerId);
             }
           }
 
           // 5. Update Cash Drawer Log (Cash Management)
           const cashPayment = sale.payments.find(p => p.method === 'cash' || p.method === 'usd_cash');
           if (cashPayment) {
-            await appwrite.from('cash_drawer_logs').insert([{
+            await supabase.from('cash_drawer_logs').insert([{
               amount: cashPayment.amount,
               transaction_type: 'cash_sale',
               notes: `Sale ${sale.receiptNumber}`,
@@ -456,7 +455,7 @@ export default function POS() {
         toast.error('Please input a valid opening balance float (non-negative).');
         return;
       }
-      const { appwrite: appService } = await import('../lib/appwrite');
+      const { supabase: appService } = await import('../lib/supabaseClient');
       const { data: userData } = await appService.auth.getUser();
       if (!userData?.user) {
         toast.error('Session error: Could not verify user authentic token.');

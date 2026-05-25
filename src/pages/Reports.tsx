@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { Button } from '../components/ui/button';
 import { Download, TrendingUp, TrendingDown, DollarSign } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { appwrite } from '../lib/appwrite';
+import { supabase } from '../lib/supabaseClient';
 import { useTheme } from 'next-themes';
 
 export default function Reports() {
@@ -23,7 +23,7 @@ export default function Reports() {
   useEffect(() => {
     async function fetchReports() {
       try {
-        const { data: salesInfo } = await appwrite.from('sales').select('total_amount, created_at, total_tax_amount');
+        const { data: salesInfo } = await supabase.from('sales').select('total_amount, created_at, total_tax_amount');
         
         let revenue = 0;
         let expenses = 0;

@@ -24,7 +24,7 @@ import { ScrollArea } from '../components/ui/scroll-area';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog';
 import { toast } from 'sonner';
-import { appwrite } from '../lib/appwrite';
+import { supabase } from '../lib/supabaseClient';
 import { 
   initializeChartOfAccounts, 
   postJournalEntry, 
@@ -163,10 +163,10 @@ export default function Accounting() {
         toast.error('Expense amount must be a positive number.');
         return;
       }
-      const { data: userData } = await appwrite.auth.getUser();
+      const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      const { data: businessData } = await appwrite.from('business_users')
+      const { data: businessData } = await supabase.from('business_users')
         .select('business_id, branch_id')
         .eq('user_id', userData.user.id)
         .limit(1)
@@ -230,10 +230,10 @@ export default function Accounting() {
         return;
       }
 
-      const { data: userData } = await appwrite.auth.getUser();
+      const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      const { data: businessData } = await appwrite.from('business_users')
+      const { data: businessData } = await supabase.from('business_users')
         .select('business_id, branch_id')
         .eq('user_id', userData.user.id)
         .limit(1)
@@ -280,10 +280,10 @@ export default function Accounting() {
   const loadAllAccountingData = async () => {
     try {
       setLoading(true);
-      const { data: userData } = await appwrite.auth.getUser();
+      const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      const { data: businessData } = await appwrite.from('business_users')
+      const { data: businessData } = await supabase.from('business_users')
         .select('business_id, branch_id')
         .eq('user_id', userData.user.id)
         .limit(1)
@@ -295,7 +295,7 @@ export default function Accounting() {
       await initializeChartOfAccounts(businessId);
 
       // 2. Load accounts
-      const acctsRes = await appwrite.from('accounts')
+      const acctsRes = await supabase.from('accounts')
         .eq('business_id', businessId)
         .select('*');
       
@@ -303,7 +303,7 @@ export default function Accounting() {
       setAccounts(sortedAccounts);
 
       // 3. Load journal entries and lines
-      const jesRes = await appwrite.from('journal_entries')
+      const jesRes = await supabase.from('journal_entries')
         .eq('business_id', businessId)
         .select('*');
       
@@ -311,7 +311,7 @@ export default function Accounting() {
       setJournalEntries(sortedJEs);
 
       if (sortedJEs.length > 0) {
-        const jLinesRes = await appwrite.from('journal_lines').select('*');
+        const jLinesRes = await supabase.from('journal_lines').select('*');
         const lMap: Record<string, JournalLine[]> = {};
         
         (jLinesRes.data || []).forEach((line: any) => {
@@ -330,7 +330,7 @@ export default function Accounting() {
       }
 
       // 4. Load Audit Logs
-      const auditRes = await appwrite.from('audit_logs')
+      const auditRes = await supabase.from('audit_logs')
         .eq('business_id', businessId)
         .select('*');
       
@@ -362,10 +362,10 @@ export default function Accounting() {
         return;
       }
 
-      const { data: userData } = await appwrite.auth.getUser();
+      const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      const { data: businessData } = await appwrite.from('business_users')
+      const { data: businessData } = await supabase.from('business_users')
         .select('business_id')
         .eq('user_id', userData.user.id)
         .limit(1)
@@ -381,7 +381,7 @@ export default function Accounting() {
       }
 
       const id = 'acct_' + Math.random().toString(36).substr(2, 9);
-      await appwrite.from('accounts').insert({
+      await supabase.from('accounts').insert({
         id,
         business_id: businessId,
         code: newAcctCode,
@@ -432,10 +432,10 @@ export default function Accounting() {
         return;
       }
 
-      const { data: userData } = await appwrite.auth.getUser();
+      const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) return;
 
-      const { data: businessData } = await appwrite.from('business_users')
+      const { data: businessData } = await supabase.from('business_users')
         .select('business_id, branch_id')
         .eq('user_id', userData.user.id)
         .limit(1)

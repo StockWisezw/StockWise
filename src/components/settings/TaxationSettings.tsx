@@ -8,7 +8,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../ui/badge';
 import { Plus, Calculator, Edit2, Percent, ListPlus, Receipt, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { appwrite } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabaseClient';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../ui/dialog';
 
 export function TaxationSettings() {
   const [isAdding, setIsAdding] = useState(false);
@@ -20,6 +21,14 @@ export function TaxationSettings() {
   const [newExpenseName, setNewExpenseName] = useState('');
   const [newExpenseDesc, setNewExpenseDesc] = useState('');
   const [isAddingExpense, setIsAddingExpense] = useState(false);
+
+  // Tax rates dialog forms
+  const [isRateDialogOpen, setIsRateDialogOpen] = useState(false);
+  const [selectedRate, setSelectedRate] = useState<any | null>(null);
+  const [rateName, setRateName] = useState('');
+  const [ratePercent, setRatePercent] = useState('15');
+  const [rateActive, setRateActive] = useState(true);
+  const [rateDefault, setRateDefault] = useState(false);
 
   useEffect(() => {
     fetchTaxRates();
@@ -33,7 +42,7 @@ export function TaxationSettings() {
   const fetchTaxRates = async () => {
     try {
       setLoading(true);
-      const { data, error } = await appwrite
+      const { data, error } = await supabase
         .from('tax_rates')
         .select('*')
         .order('name');
@@ -64,7 +73,7 @@ export function TaxationSettings() {
   const fetchExpenseCategories = async () => {
     try {
       setExpensesLoading(true);
-      const { data } = await appwrite.from('expense_categories').select('*').order('name', { ascending: true });
+      const { data } = await supabase.from('expense_categories').select('*').order('name', { ascending: true });
       let categories = data || [];
 
       if (categories.length === 0) {
@@ -77,12 +86,12 @@ export function TaxationSettings() {
           { name: 'Office Supplies', description: 'Stationery, consumables' },
         ];
         
-        await Promise.all(defaults.map(cat => appwrite.from('expense_categories').insert([{
+        await Promise.all(defaults.map(cat => supabase.from('expense_categories').insert([{
             ...cat,
             created_at: new Date().toISOString()
         }])));
         
-        const { data: snap2 } = await appwrite.from('expense_categories').select('*').order('name', { ascending: true });
+        const { data: snap2 } = await supabase.from('expense_categories').select('*').order('name', { ascending: true });
         categories = snap2 || [];
       }
       setExpenseCategories(categories);
@@ -100,7 +109,7 @@ export function TaxationSettings() {
     if (!newExpenseName.trim()) return;
     try {
       setIsAddingExpense(true);
-      await appwrite.from('expense_categories').insert([{
+      await supabase.from('expense_categories').insert([{
         name: newExpenseName,
         description: newExpenseDesc,
         created_at: new Date().toISOString()
@@ -118,7 +127,7 @@ export function TaxationSettings() {
 
   const handleDeleteExpense = async (id: string) => {
     try {
-      await appwrite.from('expense_categories').delete().eq('id', id);
+      await supabase.from('expense_categories').delete().eq('id', id);
       toast.success('Category removed');
       fetchExpenseCategories();
     } catch (err) {
@@ -132,12 +141,106 @@ export function TaxationSettings() {
     toast.success(enabled ? 'VAT calculation enabled' : 'VAT calculation disabled');
   };
 
-  const handleAdd = () => {
-    setIsAdding(true);
-    setTimeout(() => {
-      setIsAdding(false);
-      toast.info('Tax rate form will open here.');
-    }, 400);
+  const openAddRateDialog = () => {
+    setSelectedRate(null);
+    setRateName('');
+    setRatePercent('15');
+    setRateActive(true);
+    setRateDefault(false);
+    setIsRateDialogOpen(true);
+  };
+
+  const openEditRateDialog = (rate: any) => {
+    setSelectedRate(rate);
+    setRateName(rate.name);
+    setRatePercent(String(rate.rate));
+    setRateActive(rate.is_active !== false);
+    setRateDefault(rate.is_default || false);
+    setIsRateDialogOpen(true);
+  };
+
+  const handleSaveTaxRate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!rateName.trim()) {
+      toast.error('Tax rate name is required');
+      return;
+    }
+
+    try {
+      const rateVal = parseFloat(ratePercent);
+      if (isNaN(rateVal) || rateVal < 0) {
+        toast.error('Please enter a valid rate percentage');
+        return;
+      }
+
+      const { data: userData } = await supabase.auth.getUser();
+      let businessId = '';
+
+      if (userData?.user) {
+        const { data: businessData } = await supabase
+          .from('business_users')
+          .select('business_id')
+          .eq('user_id', userData.user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (businessData) {
+          businessId = businessData.business_id;
+        }
+      }
+
+      const payload = {
+        name: rateName,
+        rate: rateVal,
+        is_active: rateActive,
+        is_default: rateDefault,
+        business_id: businessId || null
+      };
+
+      if (selectedRate) {
+        // Edit Rate
+        const { error } = await supabase
+          .from('tax_rates')
+          .update(payload)
+          .eq('id', selectedRate.id);
+
+        if (error) throw error;
+        toast.success(`Tax rate "${rateName}" updated`);
+      } else {
+        // Create Rate
+        const newRateId = crypto.randomUUID();
+        const { error } = await supabase
+          .from('tax_rates')
+          .insert({ id: newRateId, ...payload });
+
+        if (error) throw error;
+        toast.success(`Tax rate "${rateName}" added successfully`);
+      }
+
+      setIsRateDialogOpen(false);
+      fetchTaxRates();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Error saving tax rate: ${err.message || 'Unknown error'}`);
+    }
+  };
+
+  const handleDeleteTaxRate = async (id: string, name: string) => {
+    if (!confirm(`Are you sure you want to delete tax rate "${name}"?`)) return;
+
+    try {
+      const { error } = await supabase
+        .from('tax_rates')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      toast.success(`Tax rate "${name}" deleted`);
+      fetchTaxRates();
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Error deleting tax rate: ${err.message || 'Unknown error'}`);
+    }
   };
 
   return (
@@ -149,7 +252,7 @@ export function TaxationSettings() {
              Manage your tax rules, calculation methods, and VAT rates.
            </p>
         </div>
-        <Button onClick={handleAdd} disabled={isAdding} className="bg-primary text-primary-foreground shadow-sm">
+        <Button onClick={openAddRateDialog} className="bg-primary text-primary-foreground shadow-sm">
            <Plus className="mr-2 h-4 w-4" /> Add Tax Rate
         </Button>
       </div>
@@ -247,9 +350,14 @@ export function TaxationSettings() {
                          </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                         <Button variant="outline" size="sm" className="h-8 border-zinc-200 text-zinc-700 hover:bg-zinc-100">
-                            <Edit2 className="w-3 h-3 mr-1.5" /> Edit
-                         </Button>
+                         <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                           <Button onClick={() => openEditRateDialog(tax)} variant="outline" size="sm" className="h-8 border-zinc-200 text-zinc-700 hover:bg-zinc-100">
+                              <Edit2 className="w-3 h-3 mr-1.5" /> Edit
+                           </Button>
+                           <Button onClick={() => handleDeleteTaxRate(tax.id, tax.name)} variant="ghost" size="icon" className="h-8 w-8 text-zinc-400 hover:text-red-600 hover:bg-red-50">
+                              <Trash2 className="w-4 h-4" />
+                           </Button>
+                         </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -349,6 +457,63 @@ export function TaxationSettings() {
           </Card>
         </div>
       </div>
+
+      {/* TAX RATE MANAGE DIALOG */}
+      <Dialog open={isRateDialogOpen} onOpenChange={setIsRateDialogOpen}>
+        <DialogContent className="sm:max-w-md bg-white text-zinc-950">
+          <DialogHeader>
+            <DialogTitle>{selectedRate ? 'Update Configured Tax Rate' : 'Configure New Tax Rate'}</DialogTitle>
+          </DialogHeader>
+
+          <form onSubmit={handleSaveTaxRate} className="space-y-4 pt-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs font-semibold text-zinc-600">Tax Name / Label</Label>
+              <Input 
+                value={rateName} 
+                onChange={e => setRateName(e.target.value)} 
+                placeholder="e.g. VAT Standard, VAT Exempt, Zero-Rated" 
+                required 
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <Label className="text-xs font-semibold text-zinc-600">Percentage Rate (%)</Label>
+                <Input 
+                  type="number" 
+                  step="0.01" 
+                  value={ratePercent} 
+                  onChange={e => setRatePercent(e.target.value)} 
+                  placeholder="15" 
+                  required 
+                />
+              </div>
+
+              <div className="flex flex-col justify-end space-y-1.5 pb-1">
+                <div className="flex items-center justify-between border p-2.5 rounded-md bg-zinc-50">
+                  <span className="text-xs font-semibold text-zinc-600">Set Default</span>
+                  <Switch checked={rateDefault} onCheckedChange={setRateDefault} />
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between border p-3 rounded-md bg-zinc-50">
+              <div className="flex flex-col">
+                <span className="text-xs font-semibold text-zinc-900">Active Rate</span>
+                <span className="text-[10px] text-zinc-500">Disable if this rate is no longer compliant</span>
+              </div>
+              <Switch checked={rateActive} onCheckedChange={setRateActive} />
+            </div>
+
+            <DialogFooter className="pt-4 border-t gap-2 sm:gap-0">
+              <Button type="button" variant="outline" onClick={() => setIsRateDialogOpen(false)}>Cancel</Button>
+              <Button type="submit" className="bg-blue-600 text-white hover:bg-blue-700">
+                {selectedRate ? 'Save Changes' : 'Create Tax Rate'}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

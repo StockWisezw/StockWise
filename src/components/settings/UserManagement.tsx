@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
-import { appwrite } from '../../lib/appwrite';
+import { supabase } from '../../lib/supabaseClient';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -23,14 +23,14 @@ export function UserManagement() {
   useEffect(() => {
     async function loadTeam() {
       try {
-        const { data: userData } = await appwrite.auth.getUser();
+        const { data: userData } = await supabase.auth.getUser();
         if (!userData.user) return;
 
-        const { data: buData } = await appwrite.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
+        const { data: buData } = await supabase.from('business_users').select('business_id').eq('user_id', userData.user.id).limit(1).maybeSingle();
         if (!buData) return;
         setBusinessId(buData.business_id);
 
-        const { data: teamData } = await appwrite.from('business_users').select('*').eq('business_id', buData.business_id);
+        const { data: teamData } = await supabase.from('business_users').select('*').eq('business_id', buData.business_id);
         
         if (teamData) {
             // Also fetch profiles for these users
@@ -39,7 +39,7 @@ export function UserManagement() {
             
             if (userIds.length > 0) {
                // Due to simplified schema wrapper, we'll fetch all profiles and filter locally (not scalable for thousands but fine for demo)
-               const { data: allProfiles } = await appwrite.from('profiles').select('*');
+               const { data: allProfiles } = await supabase.from('profiles').select('*');
                if (allProfiles) {
                    allProfiles.forEach((p: any) => {
                        profileMap[p.id] = p;
@@ -73,7 +73,7 @@ export function UserManagement() {
     if (!businessId || !inviteEmail) return;
     setIsInviting(true);
     try {
-        const { error } = await appwrite.from('business_users').insert({
+        const { error } = await supabase.from('business_users').insert({
             business_id: businessId,
             invited_email: inviteEmail,
             role_id: inviteRole // just storing string role to simple field for now

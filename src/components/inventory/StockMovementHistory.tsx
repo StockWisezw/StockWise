@@ -5,7 +5,7 @@ import { Search, Filter, ArrowUpRight, ArrowDownRight, RefreshCw, AlertCircle } 
 import { Input } from '../ui/input';
 import { Badge } from '../ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
-import { appwrite } from '@/lib/appwrite';
+import { supabase } from '@/lib/supabaseClient';
 import { toast } from 'sonner';
 
 export function StockMovementHistory() {
@@ -20,7 +20,7 @@ export function StockMovementHistory() {
     try {
       setLoading(true);
       // Try to fetch advanced stock movements first, fallback to standard if not found/error
-      const { data, error } = await appwrite
+      const { data, error } = await supabase
         .from('stock_movements')
         .select(`
           id,

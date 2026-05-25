@@ -6,7 +6,7 @@ import { Label } from '../components/ui/label';
 import { Badge } from '../components/ui/badge';
 import { Lock, Unlock, DollarSign, Calculator, FileText, AlertTriangle, ArrowUpRight, ArrowDownRight, UserMinus } from 'lucide-react';
 import { toast } from 'sonner';
-import { appwrite } from '../lib/appwrite';
+import { supabase } from '../lib/supabaseClient';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 
 interface CashLog {
@@ -46,7 +46,7 @@ export default function CashManagement() {
       const isoStartOfDay = startOfDay.toISOString();
 
       // 1. Fetch sales
-      const { data: salesData } = await appwrite.from('sales')
+      const { data: salesData } = await supabase.from('sales')
         .select('*')
         .eq('status', 'completed')
         .gte('created_at', isoStartOfDay);
@@ -54,7 +54,7 @@ export default function CashManagement() {
       const totalCashSales = salesData?.filter(s => s.payment_method === 'cash').reduce((sum, sale) => sum + Number(sale.total), 0) || 0;
       
       // 2. Fetch cash logs
-      const { data: logsDocs } = await appwrite.from('cash_drawer_logs')
+      const { data: logsDocs } = await supabase.from('cash_drawer_logs')
         .select('*')
         .gte('created_at', isoStartOfDay)
         .order('created_at', { ascending: false });
@@ -115,7 +115,7 @@ export default function CashManagement() {
     }
     
     try {
-        await appwrite.from('cash_drawer_logs').insert([{
+        await supabase.from('cash_drawer_logs').insert([{
             amount: parseFloat(entryAmount),
             transaction_type: entryType,
             notes: entryNotes,
@@ -147,7 +147,7 @@ export default function CashManagement() {
     }
 
     try {
-        await appwrite.from('cash_drawer_logs').insert([{
+        await supabase.from('cash_drawer_logs').insert([{
             amount: countedCash,
             transaction_type: 'closing_count',
             notes: `Counted: $${countedCash.toFixed(2)}, Expected: $${expectedCash.toFixed(2)}, Variance: $${variance.toFixed(2)}. ${notes}`,
@@ -169,7 +169,7 @@ export default function CashManagement() {
     try {
         const floatAmount = parseFloat(startingFloat) || 0;
         
-        await appwrite.from('cash_drawer_logs').insert([{
+        await supabase.from('cash_drawer_logs').insert([{
             amount: floatAmount,
             transaction_type: 'opening_float',
             notes: 'Register opened',

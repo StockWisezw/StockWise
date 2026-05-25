@@ -15,7 +15,8 @@ import {
   TableCell,
 } from '../ui/table';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
-import { appwrite } from '../../lib/appwrite';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { supabase } from '../../lib/supabaseClient';
 import { toast } from 'sonner';
 
 export function ProductList() {
@@ -23,6 +24,10 @@ export function ProductList() {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isAddOpen, setIsAddOpen] = useState(false);
+  
+  // Branch configuration states
+  const [branches, setBranches] = useState<any[]>([]);
+  const [selectedBranchId, setSelectedBranchId] = useState<string>('');
   
   // Add Product Form State
   const [newProductName, setNewProductName] = useState('');
@@ -38,10 +43,30 @@ export function ProductList() {
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const [productsRes, inventoryRes, categoriesRes] = await Promise.all([
-        appwrite.from('products').select('*').eq('is_active', true).order('name'),
-        appwrite.from('inventory').select('*'),
-        appwrite.from('categories').select('*')
+
+      const { data: userData } = await supabase.auth.getUser();
+      let businessId = '';
+
+      if (userData?.user) {
+        const { data: businessData } = await supabase
+          .from('business_users')
+          .select('business_id')
+          .eq('user_id', userData.user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (businessData) {
+          businessId = businessData.business_id;
+        }
+      }
+
+      const [productsRes, inventoryRes, categoriesRes, branchesRes] = await Promise.all([
+        supabase.from('products').select('*').eq('is_active', true).order('name'),
+        supabase.from('inventory').select('*'),
+        supabase.from('categories').select('*'),
+        businessId
+          ? supabase.from('branches').select('*').eq('business_id', businessId)
+          : supabase.from('branches').select('*')
       ]);
       
       if (productsRes.error) {
@@ -51,6 +76,12 @@ export function ProductList() {
       const productsData = productsRes.data || [];
       const inventoryData = inventoryRes.data || [];
       const categoriesData = categoriesRes.data || [];
+      const branchesData = branchesRes?.data || [];
+      
+      setBranches(branchesData);
+      if (branchesData.length > 0 && !selectedBranchId) {
+        setSelectedBranchId(branchesData[0].id);
+      }
       
       const mappedProducts = productsData.map(p => {
         const productInventory = inventoryData.filter((i: any) => i.product_id === p.id);
@@ -76,7 +107,7 @@ export function ProductList() {
     fetchProducts();
 
     // Subscribe to realtime changes on products
-    const channel = appwrite
+    const channel = supabase
       .channel('public:products')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, (payload) => {
         fetchProducts(); // Refresh list on change
@@ -84,13 +115,13 @@ export function ProductList() {
       .subscribe();
 
     return () => {
-      appwrite.removeChannel(channel);
+      supabase.removeChannel(channel);
     };
   }, []);
 
   const handleDelete = async (id: string) => {
     try {
-      const { error } = await appwrite.from('products').update({ is_active: false }).eq('id', id);
+      const { error } = await supabase.from('products').update({ is_active: false }).eq('id', id);
       if (error) throw error;
       toast.success("Product deleted successfully");
       // fetchProducts() will be called automatically by Realtime if active
@@ -106,11 +137,11 @@ export function ProductList() {
        return;
     }
     try {
-       const { data: userData } = await appwrite.auth.getUser();
+       const { data: userData } = await supabase.auth.getUser();
        if (!userData?.user) throw new Error("Not authenticated");
 
        // Fetch user's business_id
-       const { data: businessData, error: businessError } = await appwrite
+       const { data: businessData, error: businessError } = await supabase
          .from('business_users')
          .select('business_id')
          .eq('user_id', userData.user.id)
@@ -125,7 +156,7 @@ export function ProductList() {
        const price = parseFloat(newProductPrice);
        const finalSku = isPack && parseInt(packSize) > 1 ? `${newProductSKU}|PK:${packSize}` : newProductSKU;
        
-       const { data: newProduct, error: productError } = await appwrite.from('products').insert({
+       const { data: newProduct, error: productError } = await supabase.from('products').insert({
          business_id: businessData.business_id,
          name: newProductName,
          sku: finalSku,
@@ -139,7 +170,7 @@ export function ProductList() {
        // Set initial stock if required
        const stock = parseInt(newProductStock, 10);
        if (stock > 0) {
-         const { data: branchData } = await appwrite
+         const { data: branchData } = await supabase
            .from('branches')
            .select('id')
            .eq('business_id', businessData.business_id)
@@ -147,7 +178,7 @@ export function ProductList() {
           .maybeSingle();
            
          if (branchData) {
-           await appwrite.from('inventory').insert({
+           await supabase.from('inventory').insert({
              business_id: businessData.business_id,
              branch_id: branchData.id,
              product_id: newProduct.id,
@@ -179,32 +210,49 @@ export function ProductList() {
       return;
     }
     
-    // Generate CSV content
-    const headers = ['SKU', 'Barcode', 'Name', 'Category', 'Retail Price', 'Wholesale Price', 'Tax Class', 'Active'];
-    const rows = products.map(p => [
-      p.sku || '',
-      p.barcode || '',
-      `"${p.name || ''}"`,
-      p.categories?.name || '',
-      p.retail_price || 0,
-      p.wholesale_price || 0,
-      p.tax_class || '',
-      p.is_active ? 'Yes' : 'No'
-    ]);
+    const selectedBranch = branches.find(b => b.id === selectedBranchId);
+    const branchName = selectedBranch ? selectedBranch.name : 'All/Default Branch';
     
-    const csvContent = "data:text/csv;charset=utf-8," 
-      + headers.join(',') + "\n" 
+    // Generate CSV content
+    const headers = ['SKU', 'Barcode', 'Product Name', 'Category', 'Branch', 'Stock Level', 'Retail Price ($)', 'Wholesale Price ($)', 'Tax Class', 'Active'];
+    const rows = products.map(p => {
+      const stockRecord = selectedBranchId 
+        ? p.inventory?.find((i: any) => i.branch_id === selectedBranchId)
+        : p.inventory?.[0];
+      const stock = stockRecord ? stockRecord.quantity : 0;
+
+      return [
+        p.sku || '',
+        p.barcode || '',
+        `"${(p.name || '').replace(/"/g, '""')}"`,
+        p.categories?.name || 'Uncategorized',
+        `"${branchName.replace(/"/g, '""')}"`,
+        stock,
+        p.retail_price?.toFixed(2) || '0.00',
+        p.wholesale_price?.toFixed(2) || '0.00',
+        p.tax_class || '',
+        p.is_active ? 'Yes' : 'No'
+      ];
+    });
+    
+    const csvContent = "\uFEFF" + headers.join(',') + "\n" 
       + rows.map(e => e.join(",")).join("\n");
       
-    const encodedUri = encodeURI(csvContent);
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `products_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.setAttribute("href", url);
+    
+    const dateStr = new Date().toISOString().split('T')[0];
+    const cleanBranchName = branchName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+    link.setAttribute("download", `inventory_report_${cleanBranchName}_${dateStr}.csv`);
+    
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
     
-    toast.success('Products exported successfully');
+    toast.success(`Inventory report for branch "${branchName}" exported successfully`);
   };
 
   const getStatusBadge = (stock: number) => {
@@ -216,17 +264,35 @@ export function ProductList() {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
-          <Input 
-            placeholder="Search by name, SKU, or barcode..." 
-            className="pl-9 bg-white shadow-sm border-zinc-200"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
+      <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+        <div className="flex flex-col sm:flex-row gap-2 w-full lg:max-w-xl">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-2.5 h-4 w-4 text-zinc-500" />
+            <Input 
+              placeholder="Search by name, SKU, or barcode..." 
+              className="pl-9 bg-white shadow-sm border-zinc-200"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          {branches.length > 0 && (
+            <div className="w-full sm:w-48">
+              <Select value={selectedBranchId} onValueChange={setSelectedBranchId}>
+                <SelectTrigger className="bg-white shadow-sm border-zinc-200 w-full">
+                  <SelectValue placeholder="Select Branch" />
+                </SelectTrigger>
+                <SelectContent className="bg-white">
+                  {branches.map(b => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
         </div>
-        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+        <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
           <Button variant="outline" className="bg-white shadow-sm" onClick={() => toast.info('Please use the "Bulk Import" tab to import products.')}>Import</Button>
           <Button variant="outline" className="bg-white shadow-sm" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Print</Button>
           <Button variant="outline" className="bg-white shadow-sm" onClick={exportCSV}><Download className="mr-2 h-4 w-4" /> Export</Button>
@@ -309,7 +375,10 @@ export function ProductList() {
             </TableHeader>
             <TableBody>
               {products.filter(item => item.name.toLowerCase().includes(searchTerm.toLowerCase())).map((item) => {
-                const stock = item.inventory?.[0]?.quantity || 0;
+                const stockRecord = selectedBranchId 
+                  ? item.inventory?.find((i: any) => i.branch_id === selectedBranchId)
+                  : item.inventory?.[0];
+                const stock = stockRecord ? stockRecord.quantity : 0;
                 return (
                 <TableRow key={item.id} className="hover:bg-zinc-50/50 cursor-pointer group">
                   <TableCell>

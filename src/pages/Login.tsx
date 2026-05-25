@@ -1,7 +1,7 @@
 import * as React from 'react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { appwrite } from '../lib/appwrite';
+import { supabase } from '../lib/supabaseClient';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -59,7 +59,7 @@ export default function Login() {
       setLoading(true);
       const verifyMagicLink = async () => {
         try {
-          const { error } = await appwrite.auth.completeMagicLinkSession(userId, secret);
+          const { error } = await supabase.auth.completeMagicLinkSession(userId, secret);
           if (error) throw error;
           toast.success("Successfully authenticated with Magic Link!");
           navigate('/dashboard');
@@ -106,7 +106,7 @@ export default function Login() {
       }
 
       try {
-        const { data, error } = await appwrite.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email,
           password,
         });
@@ -117,7 +117,7 @@ export default function Login() {
         if (!user) throw new Error("User creation failed");
 
         // Setup Firebase Data
-        await appwrite.from('profiles').insert([
+        await supabase.from('profiles').insert([
           { id: user.id, first_name: firstName, last_name: lastName, email: user.email }
         ]);
 
@@ -128,7 +128,7 @@ export default function Login() {
            endDate.setDate(endDate.getDate() + 30); // 30-day Pro plan
         }
 
-        const { data: bData } = await appwrite.from('businesses').insert([
+        const { data: bData } = await supabase.from('businesses').insert([
           { 
             name: businessName, 
             tax_number: registrationNumber,
@@ -139,7 +139,7 @@ export default function Login() {
         const bRef = bData as any;
 
         if (bRef) {
-          await appwrite.from('subscriptions').insert([{
+          await supabase.from('subscriptions').insert([{
              business_id: bRef.id,
              plan_name: planChoice === 'TRIAL' ? 'free_trial' : 'pro',
              status: 'active',
@@ -147,25 +147,25 @@ export default function Login() {
              end_date: endDate.toISOString()
           }]);
 
-          const { data: rData } = await appwrite.from('roles').insert([
+          const { data: rData } = await supabase.from('roles').insert([
             { business_id: bRef.id, name: 'Admin', description: 'System Administrator' }
           ]).select().single();
 
           const rRef = rData as any;
 
-          const { data: brData } = await appwrite.from('branches').insert([
+          const { data: brData } = await supabase.from('branches').insert([
             { business_id: bRef.id, name: 'Main Branch', type: 'retail' }
           ]).select().single();
           
           const brRef = brData as any;
 
           if (rRef && brRef) {
-            await appwrite.from('business_users').insert([
+            await supabase.from('business_users').insert([
               { business_id: bRef.id, user_id: user.id, branch_id: brRef.id, role_id: rRef.id }
             ]);
           }
 
-          await appwrite.from('categories').insert([
+          await supabase.from('categories').insert([
             { business_id: bRef.id, name: 'General' }
           ]);
         }
@@ -186,7 +186,7 @@ export default function Login() {
       }
 
       try {
-        const { error } = await appwrite.auth.signInWithPassword({
+        const { error } = await supabase.auth.signInWithPassword({
           email,
           password
         });
@@ -218,7 +218,7 @@ export default function Login() {
     }
 
     try {
-      const { error } = await appwrite.auth.sendPasswordReset(email);
+      const { error } = await supabase.auth.sendPasswordReset(email);
       if (error) {
         throw error;
       }
@@ -234,7 +234,7 @@ export default function Login() {
   const handleOAuthSignIn = async (provider: string) => {
     setLoading(true);
     try {
-      const { error } = await appwrite.auth.signInWithOAuth({
+      const { error } = await supabase.auth.signInWithOAuth({
         provider: provider,
       });
       if (error) throw error;

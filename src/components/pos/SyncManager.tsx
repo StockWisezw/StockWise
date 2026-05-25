@@ -7,8 +7,7 @@ import {
   postJournalEntry,
   logAuditEvent
 } from '../../services/ledgerService';
-import { db } from '../../lib/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { db, doc, getDoc, updateDoc } from '../../lib/supabaseClient';
 
 const CHANNEL_NAME = 'tareza-pos-sync-channel';
 
@@ -86,9 +85,9 @@ export function SyncManager() {
     });
 
     try {
-      const { appwrite } = await import('../../lib/appwrite');
+      const { supabase } = await import('../../lib/supabaseClient');
 
-      const { data: userData } = await appwrite.auth.getUser();
+      const { data: userData } = await supabase.auth.getUser();
       if (!userData?.user) {
         throw new Error('No active user context found. Authenticate to sync offline sales.');
       }
@@ -96,7 +95,7 @@ export function SyncManager() {
       let businessId = 'default_business';
       let branchId = 'default_branch';
 
-      const { data: businessData } = await appwrite.from('business_users')
+      const { data: businessData } = await supabase.from('business_users')
         .select('business_id, branch_id')
         .eq('user_id', userData.user.id)
         .limit(1)
@@ -112,7 +111,7 @@ export function SyncManager() {
       }
 
       // Safeguard Idempotency: Don't insert duplicates if transaction was successfully synced previously
-      const { data: existingSales } = await appwrite.from('sales')
+      const { data: existingSales } = await supabase.from('sales')
         .select('id')
         .eq('receipt_number', sale.receiptNumber)
         .limit(1)
@@ -136,7 +135,7 @@ export function SyncManager() {
         if (businessId) salePayload.business_id = businessId;
         if (sale.customerId) salePayload.customer_id = sale.customerId;
 
-        const { data: newDoc, error: saleErr } = await appwrite.from('sales').insert([salePayload]).select().single();
+        const { data: newDoc, error: saleErr } = await supabase.from('sales').insert([salePayload]).select().single();
         if (saleErr || !newDoc) {
           throw new Error(saleErr?.message || 'Failed to initialize sale document in Firestore.');
         }
@@ -152,7 +151,7 @@ export function SyncManager() {
             line_total: item.subtotal,
             vat_amount: item.vatAmount
           }));
-          await appwrite.from('sale_items').insert(itemsPayload);
+          await supabase.from('sale_items').insert(itemsPayload);
 
           for (const item of sale.items) {
             try {
@@ -217,10 +216,10 @@ export function SyncManager() {
         // 4. Update Customer credit balances
         if (creditPayment && sale.customerId) {
           try {
-            const { data: custData } = await appwrite.from('customers').select('*').eq('id', sale.customerId).single();
+            const { data: custData } = await supabase.from('customers').select('*').eq('id', sale.customerId).single();
             if (custData) {
               const newBalance = Number(custData.balance || 0) + creditPayment.amount;
-              await appwrite.from('customers').update({ balance: newBalance }).eq('id', sale.customerId);
+              await supabase.from('customers').update({ balance: newBalance }).eq('id', sale.customerId);
             }
           } catch (err) {
             console.error('[SyncManager] Failed to update customer credit balance:', err);
@@ -231,7 +230,7 @@ export function SyncManager() {
         const cashPayment = sale.payments.find(p => p.method === 'cash' || p.method === 'usd_cash');
         if (cashPayment) {
           try {
-            await appwrite.from('cash_drawer_logs').insert([{
+            await supabase.from('cash_drawer_logs').insert([{
               amount: cashPayment.amount,
               transaction_type: 'cash_sale',
               notes: `Sale ${sale.receiptNumber}`,

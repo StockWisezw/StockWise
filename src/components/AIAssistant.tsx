@@ -4,7 +4,7 @@ import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { ScrollArea } from "./ui/scroll-area";
 import { Card } from "./ui/card";
-import { appwrite } from "../lib/appwrite";
+import { supabase } from '../lib/supabaseClient';
 
 interface Message {
   id: string;
@@ -40,13 +40,13 @@ export function AIAssistant() {
   useEffect(() => {
     async function loadStats() {
       try {
-        const { data: salesList } = await appwrite.from('sales').select('total_amount, created_at');
-        const { data: productsList } = await appwrite.from('products').select('*');
-        const { data: branchesList } = await appwrite.from('branches').select('*');
+        const { data: salesList } = await supabase.from('sales').select('total_amount, created_at');
+        const { data: productsList } = await supabase.from('products').select('*');
+        const { data: branchesList } = await supabase.from('branches').select('*');
         
         let inventoryList: any[] = [];
         try {
-          const res = await appwrite.from('inventory').select('*');
+          const res = await supabase.from('inventory').select('*');
           if (res && res.data) inventoryList = res.data;
         } catch (_) {}
 

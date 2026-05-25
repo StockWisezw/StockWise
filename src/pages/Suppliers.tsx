@@ -3,12 +3,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs'
 import { SupplierDashboard } from '../components/suppliers/SupplierDashboard';
 import { SupplierDirectory } from '../components/suppliers/SupplierDirectory';
 import { Procurement } from '../components/suppliers/Procurement';
+import GoodsReceiving from '../components/suppliers/GoodsReceiving';
 import { SupplierPayables } from '../components/suppliers/SupplierPayables';
 import { Button } from '../components/ui/button';
 import { Download, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 
 export default function Suppliers() {
   const [activeTab, setActiveTab] = useState('dashboard');
+
+  const handleNewPOClick = () => {
+    setActiveTab('procurement');
+    toast.success('Switched to Purchases tab. Please click "Create PO" to add a new Purchase Order details.');
+  };
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto pb-10">
@@ -18,8 +25,8 @@ export default function Suppliers() {
           <p className="text-zinc-500 mt-1">Manage suppliers, purchase orders, receiving, and payables.</p>
         </div>
         <div className="flex space-x-2 w-full sm:w-auto">
-          <Button variant="outline" className="w-full sm:w-auto"><Download className="mr-2 h-4 w-4" /> Export</Button>
-          <Button className="w-full sm:w-auto"><Plus className="mr-2 h-4 w-4" /> New Purchase Order</Button>
+          <Button variant="outline" className="w-full sm:w-auto" onClick={() => toast.info('Export options are available inside individual table exports.')}><Download className="mr-2 h-4 w-4" /> Export</Button>
+          <Button className="w-full sm:w-auto" onClick={handleNewPOClick}><Plus className="mr-2 h-4 w-4" /> New Purchase Order</Button>
         </div>
       </div>
 
@@ -50,11 +57,7 @@ export default function Suppliers() {
           </TabsContent>
 
           <TabsContent value="receiving" className="mt-0 outline-none">
-            <div className="p-12 text-center border-2 border-dashed border-zinc-200 rounded-xl bg-zinc-50">
-              <h3 className="text-lg font-semibold text-zinc-900 mb-2">Goods Receiving Notes (GRN)</h3>
-              <p className="text-zinc-500 max-w-md mx-auto">Receive stock against purchase orders. Track discrepancies, damaged items, and update inventory seamlessly.</p>
-              <Button className="mt-6">Receive Goods (GRN)</Button>
-            </div>
+            <GoodsReceiving />
           </TabsContent>
           
           <TabsContent value="payables" className="mt-0 outline-none">

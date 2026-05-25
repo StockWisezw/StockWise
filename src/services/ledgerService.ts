@@ -1,6 +1,4 @@
-import { appwrite } from '../lib/appwrite';
-import { db, auth } from '../lib/firebase';
-import { collection, doc, writeBatch, query, where, getDocs, getDoc } from 'firebase/firestore';
+import { supabase, db, auth, collection, doc, writeBatch, query, where, getDocs, getDoc } from '../lib/supabaseClient';
 
 export interface JournalLineInput {
   accountCode: string;
@@ -33,7 +31,7 @@ export interface RegisterSession {
  */
 export async function initializeChartOfAccounts(businessId: string): Promise<void> {
   try {
-    const existing = await appwrite.from('accounts').eq('business_id', businessId).select();
+    const existing = await supabase.from('accounts').eq('business_id', businessId).select();
     if (existing.data && existing.data.length > 0) {
       return; // Already initialized
     }
@@ -85,7 +83,7 @@ export async function logAuditEvent(
   try {
     const email = auth.currentUser?.email || 'unknown@tareza.co.zw';
     const cleanId = doc(collection(db, 'audit_logs')).id;
-    await appwrite.from('audit_logs').insert({
+    await supabase.from('audit_logs').insert({
       id: cleanId,
       business_id: businessId,
       user_id: userId,
@@ -199,7 +197,7 @@ export async function postJournalEntry(
  * 4. Register shift session management with cash integrity
  */
 export async function getOpenRegisterSession(businessId: string, userId: string): Promise<any | null> {
-  const rs = await appwrite.from('register_sessions')
+  const rs = await supabase.from('register_sessions')
     .eq('business_id', businessId)
     .eq('user_id', userId)
     .eq('status', 'OPEN')
@@ -243,7 +241,7 @@ export async function openRegisterSession(
       created_at: new Date().toISOString()
     };
 
-    await appwrite.from('register_sessions').insert(item);
+    await supabase.from('register_sessions').insert(item);
     await logAuditEvent(businessId, userId, 'OPEN_SHIFT', 'POS', null, item);
 
     return { success: true, session: item };
@@ -279,7 +277,7 @@ export async function closeRegisterSession(
       closed_at: new Date().toISOString()
     };
 
-    await appwrite.from('register_sessions').eq('id', sessionId).update(patches);
+    await supabase.from('register_sessions').eq('id', sessionId).update(patches);
     await logAuditEvent(s.business_id, s.user_id, 'CLOSE_SHIFT', 'POS', s, { ...s, ...patches });
 
     return { success: true, session: { ...s, ...patches } };
@@ -303,7 +301,7 @@ export async function recordStockMovement(
 ): Promise<{ success: boolean; quantityAfter: number; error?: string }> {
   try {
     // 1. Fetch current inventory stock for product at branch
-    const invRes = await appwrite.from('inventory')
+    const invRes = await supabase.from('inventory')
       .eq('business_id', businessId)
       .eq('branch_id', branchId)
       .eq('product_id', productId)
