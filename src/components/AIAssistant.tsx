@@ -1,412 +1,265 @@
-import React, { useState, useRef, useEffect } from "react";
-import { X, Send, User, Loader2, MessageSquare, PhoneCall, Terminal, CheckCircle2 } from "lucide-react";
-import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { ScrollArea } from "./ui/scroll-area";
-import { Card } from "./ui/card";
-import { supabase } from '../lib/supabaseClient';
-import { useAuth } from '../hooks/useAuth';
+import * as React from 'react';
+import { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { MessageSquare, Send, X, Phone, Terminal, Loader2 } from 'lucide-react';
+import { rawSupabase } from '../lib/supabaseClient';
 import { toast } from 'sonner';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ChatMessage {
   id: string;
-  channel_id?: string;
-  user_email: string;
-  message: string;
+  sender_id: string;
+  sender_email: string;
+  text: string;
   created_at: string;
 }
 
-interface ChatChannel {
-  id: string;
-  name: string;
-}
-
 export function AIAssistant() {
-  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"consulting" | "chat">("consulting");
-
-  // Chat States
-  const [channels, setChannels] = useState<ChatChannel[]>([]);
-  const [selectedChannelId, setSelectedChannelId] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<'chat' | 'support'>('chat');
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [inputText, setInputText] = useState("");
-  const [sending, setSending] = useState(false);
-  const [loadingMessages, setLoadingMessages] = useState(false);
+  const [inputText, setInputText] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Fallback local memory-based messages if network/tables are not seeded
-  const [fallbackMessages, setFallbackMessages] = useState<ChatMessage[]>([
-    {
-      id: "init-1",
-      user_email: "system@tareza.co.zw",
-      message: "Welcome to your Tareza Live Team chat channel! Start typing below to collaborate on operations.",
-      created_at: new Date(Date.now() - 3600000).toISOString()
-    },
-    {
-      id: "init-2",
-      user_email: "demo@tareza.co.zw",
-      message: "Ready for on-site audit. Please compile the Goods Received Notes for the morning session.",
-      created_at: new Date(Date.now() - 1800000).toISOString()
-    }
-  ]);
+  useEffect(() => {
+    rawSupabase.auth.getUser().then(({ data: { user } }) => {
+      setCurrentUser(user);
+    });
+  }, []);
 
-  const scrollRef = useRef<HTMLDivElement>(null);
-
-  // Load channels or init default
   useEffect(() => {
     if (!isOpen) return;
 
-    async function fetchChannels() {
+    // Fetch existing messages
+    const fetchMessages = async () => {
+      setIsLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("chat_channels")
-          .select("*")
-          .order("created_at", { ascending: true });
-
-        if (error || !data || data.length === 0) {
-          // Attempt to seed a General chat channel if database permits
-          const { data: bData } = await supabase.from("businesses").select("id").limit(1).maybeSingle();
-          if (bData?.id) {
-            const { data: newChan, error: writeErr } = await supabase
-              .from("chat_channels")
-              .insert({
-                name: "# general-lobby",
-                business_id: bData.id,
-                type: "public"
-              })
-              .select()
-              .single();
-
-            if (!writeErr && newChan) {
-              setChannels([newChan]);
-              setSelectedChannelId(newChan.id);
-              return;
-            }
-          }
-          // Default lobby state
-          setChannels([{ id: "default", name: "# general-lobby" }]);
-          setSelectedChannelId("default");
-        } else {
-          setChannels(data);
-          setSelectedChannelId(data[0].id);
-        }
-      } catch (err) {
-        setChannels([{ id: "default", name: "# general-lobby" }]);
-        setSelectedChannelId("default");
-      }
-    }
-
-    fetchChannels();
-  }, [isOpen]);
-
-  // Load chat messages when channel changes
-  useEffect(() => {
-    if (!selectedChannelId) return;
-
-    let isSubscribed = true;
-
-    async function fetchMessages() {
-      if (selectedChannelId === "default") {
-        return; // Use memory messages
-      }
-
-      setLoadingMessages(true);
-      try {
-        const { data, error } = await supabase
-          .from("chat_messages")
-          .select("*")
-          .eq("channel_id", selectedChannelId)
-          .order("created_at", { ascending: true })
-          .limit(40);
-
+        const { data, error } = await rawSupabase
+          .from('chat_messages')
+          .select('*')
+          .order('created_at', { ascending: true })
+          .limit(50);
+          
         if (error) throw error;
-
-        if (isSubscribed && data) {
-          // Fetch corresponding emails for profile ids if needed
-          const formatted = data.map((msg: any) => ({
-            id: msg.id,
-            channel_id: msg.channel_id,
-            user_email: msg.user_email || msg.user_id || "Team Member",
-            message: msg.message,
-            created_at: msg.created_at
-          }));
-          setMessages(formatted);
-        }
+        setMessages(data || []);
       } catch (err) {
-        console.warn("Could not load database messages, using offline cache.");
+        console.error('Failed to load chat messages:', err);
       } finally {
-        if (isSubscribed) setLoadingMessages(false);
+        setIsLoading(false);
       }
-    }
+    };
 
     fetchMessages();
 
-    // Poll for and sync latest messages every 4 seconds
-    const interval = setInterval(() => {
-      fetchMessages();
-    }, 4000);
+    // Subscribe to realtime postgres_changes
+    const channel = rawSupabase
+      .channel('public:chat_messages')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'chat_messages' }, (payload) => {
+        const newMsg = payload.new as ChatMessage;
+        setMessages((prev) => {
+          if (prev.some(m => m.id === newMsg.id)) return prev;
+          return [...prev, newMsg];
+        });
+      })
+      .subscribe();
 
     return () => {
-      isSubscribed = false;
-      clearInterval(interval);
+      rawSupabase.removeChannel(channel);
     };
-  }, [selectedChannelId]);
+  }, [isOpen]);
 
-  // Scroll to bottom on updates
   useEffect(() => {
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, fallbackMessages, activeTab, isOpen]);
+  }, [messages, activeTab]);
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!inputText.trim()) return;
 
-    setSending(true);
-    const userEmail = user?.email || "guest@tareza.local";
-    const userMsg = inputText.trim();
-    setInputText("");
-
-    const newLocalMsg: ChatMessage = {
-      id: Date.now().toString(),
-      user_email: userEmail,
-      message: userMsg,
-      created_at: new Date().toISOString()
-    };
-
-    if (selectedChannelId === "default" || !selectedChannelId) {
-      // Memory mode fallback
-      setFallbackMessages(prev => [...prev, newLocalMsg]);
-      setSending(false);
-      return;
-    }
+    const textToSend = inputText.trim();
+    setInputText('');
 
     try {
-      // 1. Check if we need profile_id/user_id from authentication state
-      const { data: uContext } = await supabase.auth.getUser();
-      const profileId = uContext?.user?.id;
+      const sender_id = currentUser?.id || 'anonymous';
+      const sender_email = currentUser?.email || 'anonymous@tareza.co.zw';
 
-      if (!profileId) {
-        throw new Error("No authenticated session available");
-      }
-
-      const { error } = await supabase.from("chat_messages").insert({
-        channel_id: selectedChannelId,
-        user_id: profileId,
-        user_email: userEmail,
-        message: userMsg,
+      const { error } = await rawSupabase.from('chat_messages').insert({
+        id: uuidv4(),
+        sender_id,
+        sender_email,
+        text: textToSend,
         created_at: new Date().toISOString()
       });
 
-      if (error) throw error;
-
-      // Optimistically append message to local UI
-      setMessages(prev => [...prev, newLocalMsg]);
+      if (error) {
+        toast.error('Failed to dispatch support message');
+      }
     } catch (err) {
-      // Graceful fallback on writing error
-      setFallbackMessages(prev => [...prev, newLocalMsg]);
-      toast.success("Message broadcasted locally (offline sync enabled)");
-    } finally {
-      setSending(false);
+      toast.error('Could not connect to support channel');
     }
   };
 
-  const activeMessages = selectedChannelId === "default" ? fallbackMessages : messages;
-
   return (
     <>
-      <Button
-        onClick={() => setIsOpen(true)}
-        className={`fixed bottom-6 right-6 h-14 w-14 rounded-full shadow-2xl transition-all duration-300 hover:scale-105 active:scale-95 ${isOpen ? "scale-0 opacity-0 pointer-events-none" : "flex scale-100 opacity-100 z-50 animate-bounce"}`}
-        style={{
-          background: "linear-gradient(135deg, #18181b 0%, #3f3f46 100%)",
-        }}
+      {/* Floating Launcher Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="fixed bottom-6 right-6 h-12 w-12 rounded-full bg-zinc-900 border border-zinc-800 dark:bg-white dark:border-white text-white dark:text-zinc-900 shadow-xl flex items-center justify-center cursor-pointer hover:scale-105 active:scale-95 transition-all z-50"
       >
-        <MessageSquare className="h-6 w-6 text-white" />
-      </Button>
+        {isOpen ? <X className="h-5 w-5" /> : <MessageSquare className="h-5 w-5" />}
+      </button>
 
-      {isOpen && (
-        <Card className="fixed bottom-6 right-6 w-96 max-h-[640px] h-[85vh] flex flex-col shadow-2xl border-zinc-200 z-50 overflow-hidden rounded-2xl animate-in fade-in slide-in-from-bottom-10 duration-300">
-          {/* Header */}
-          <div className="bg-zinc-900 text-white p-4 flex justify-between items-center shrink-0">
-            <div className="flex items-center space-x-2">
-              <div className="bg-white/10 p-1.5 rounded-lg">
-                <MessageSquare className="h-4 w-4 text-blue-400" />
+      {/* Floating Support Modal */}
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 30, scale: 0.95 }}
+            transition={{ duration: 0.15 }}
+            className="fixed bottom-22 right-6 w-80 sm:w-96 h-[500px] bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800/80 rounded-2xl flex flex-col shadow-2xl overflow-hidden z-50 font-sans"
+          >
+            {/* Header */}
+            <div className="bg-zinc-900 dark:bg-zinc-900 px-4 py-3 flex items-center justify-between text-white border-b border-zinc-800">
+              <div className="flex items-center gap-2">
+                <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="font-semibold text-sm tracking-tight">Tareza Support Centre</span>
               </div>
-              <div>
-                <h3 className="font-bold text-sm tracking-tight text-white leading-none">
-                  Tareza Hub & Messaging
-                </h3>
-                <p className="text-[10px] text-zinc-400 font-mono mt-1">Connect with Team & Consultants</p>
-              </div>
+              <button 
+                onClick={() => setIsOpen(false)} 
+                className="text-zinc-400 hover:text-white transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
             </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-zinc-400 hover:text-white hover:bg-white/10"
-              onClick={() => setIsOpen(false)}
-            >
-              <X className="h-4 w-4" />
-            </Button>
-          </div>
 
-          {/* Navigation Tabs */}
-          <div className="flex border-b border-zinc-200 bg-zinc-50 shrink-0">
-            <button
-              onClick={() => setActiveTab("consulting")}
-              className={`flex-1 text-center py-2.5 text-xs font-bold font-sans uppercase tracking-wider transition-all border-b-2 ${activeTab === "consulting" ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-500 hover:text-zinc-800"}`}
-            >
-              Consulting Plan
-            </button>
-            <button
-              onClick={() => setActiveTab("chat")}
-              className={`flex-1 text-center py-2.5 text-xs font-bold font-sans uppercase tracking-wider transition-all border-b-2 ${activeTab === "chat" ? "border-zinc-900 text-zinc-900" : "border-transparent text-zinc-500 hover:text-zinc-800"}`}
-            >
-              Team Chat ({activeMessages.length})
-            </button>
-          </div>
+            {/* Tabs */}
+            <div className="flex border-b border-zinc-200 dark:border-zinc-800/80 text-xs font-semibold bg-zinc-50 dark:bg-zinc-900/10">
+              <button
+                onClick={() => setActiveTab('chat')}
+                className={`flex-1 py-2.5 text-center transition-all ${
+                  activeTab === 'chat'
+                    ? 'border-b-2 border-zinc-950 text-zinc-950 dark:border-white dark:text-white'
+                    : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'
+                }`}
+              >
+                Support Chat
+              </button>
+              <button
+                onClick={() => setActiveTab('support')}
+                className={`flex-1 py-2.5 text-center transition-all ${
+                  activeTab === 'support'
+                    ? 'border-b-2 border-zinc-950 text-zinc-950 dark:border-white dark:text-white'
+                    : 'text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300'
+                }`}
+              >
+                Support
+              </button>
+            </div>
 
-          {/* Content Area */}
-          <div className="flex-1 overflow-hidden flex flex-col bg-zinc-50">
-            {activeTab === "consulting" ? (
-              <ScrollArea className="flex-1 p-5">
-                <div className="space-y-5 pb-4">
-                  <div className="bg-white p-4 rounded-xl border border-zinc-200 shadow-sm space-y-3">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-[10px] font-bold bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full uppercase tracking-wider">Premium Service Bundle</span>
-                        <h4 className="font-extrabold text-zinc-900 text-base mt-1.5">Consultancy & Stocktake Plan</h4>
-                      </div>
-                      <span className="font-mono text-xl font-black text-indigo-650">$50<span className="text-xs font-normal text-zinc-500">/mo</span></span>
+            {/* Content Area */}
+            <div className="flex-1 overflow-y-auto p-4 flex flex-col min-h-0 bg-zinc-50/50 dark:bg-zinc-950/20">
+              {activeTab === 'chat' ? (
+                <>
+                  {isLoading ? (
+                    <div className="flex-1 flex items-center justify-center text-zinc-400">
+                      <Loader2 className="h-6 w-6 animate-spin" />
                     </div>
-
-                    <p className="text-xs text-zinc-600 leading-relaxed">
-                      Numbers need expert interpretation. Our premier consultancy bundle ensures you map physical conditions to your digitized ledgers without errors.
-                    </p>
-
-                    <div className="space-y-2 text-xs text-zinc-700 bg-zinc-50 p-2.5 rounded-lg border border-zinc-200/50">
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span><strong>1 On-site Visit Included</strong> for stocktake or audit desk reviews</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span><strong>Trend Interpretation</strong> translates statistics to clear actions</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                        <span><strong>Active Support Channel</strong> to resolve technical anomalies</span>
-                      </div>
+                  ) : messages.length === 0 ? (
+                    <div className="flex-1 flex flex-col items-center justify-center text-center p-6 text-zinc-400">
+                      <MessageSquare className="h-8 w-8 mb-2 stroke-[1.5]" />
+                      <p className="text-xs font-semibold">Start a real-time thread</p>
+                      <p className="text-[10px] mt-1 max-w-[200px]">Send a message to sync instantly with technical support agents.</p>
                     </div>
+                  ) : (
+                    <div className="space-y-3 flex-1 overflow-y-auto">
+                      {messages.map((msg) => {
+                        const isMe = msg.sender_id === (currentUser?.id || 'anonymous');
+                        return (
+                          <div
+                            key={msg.id}
+                            className={`flex flex-col ${isMe ? 'items-end' : 'items-start'}`}
+                          >
+                            <span className="text-[9px] text-zinc-400 mb-1 px-1">
+                              {msg.sender_email.split('@')[0]}
+                            </span>
+                            <div
+                              className={`max-w-[80%] rounded-xl px-3 py-1.5 text-xs ${
+                                isMe
+                                  ? 'bg-zinc-900 text-white dark:bg-white dark:text-zinc-950'
+                                  : 'bg-zinc-200 text-zinc-950 dark:bg-zinc-800/80 dark:text-white'
+                              }`}
+                            >
+                              <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.text}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex flex-col h-full justify-center space-y-4 p-4 text-center">
+                  <div className="flex flex-col items-center">
+                    <Phone className="h-10 w-10 text-indigo-500 mb-2 stroke-[1.5]" />
+                    <h3 className="text-sm font-semibold text-zinc-800 dark:text-zinc-200">Need Immediate Help?</h3>
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">Our on-call support team is available 24/7 for urgent escalations.</p>
+                  </div>
 
+                  <div className="space-y-2 pt-2">
                     <a
                       href="https://wa.me/263776699950"
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="block w-full pt-1"
+                      className="flex items-center justify-center gap-2 w-full bg-indigo-600 hover:bg-indigo-700 text-white transition-all font-bold text-xs py-2.5 rounded-xl shadow-md cursor-pointer"
                     >
-                      <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 py-4">
-                        <PhoneCall className="h-3.5 w-3.5" /> Speak with Representative
-                      </Button>
+                      <Phone className="h-3.5 w-3.5" />
+                      Contact WhatsApp Support
                     </a>
-                  </div>
-
-                  {/* Access Developer Panel Link */}
-                  <div className="bg-zinc-900 text-white p-4 rounded-xl shadow-sm space-y-2">
-                    <div className="flex items-center gap-2">
-                      <Terminal className="h-4 w-4 text-blue-400" />
-                      <h5 className="font-bold text-sm text-white">Developer Administration</h5>
-                    </div>
-                    <p className="text-[11px] text-zinc-400">
-                      Access advanced diagnostic utilities, direct database telemetry logs, and manual backups triggers safely.
-                    </p>
-                    <a href="/developer-panel" className="block pt-1">
-                      <Button variant="outline" className="w-full border-zinc-700 hover:bg-zinc-800 text-zinc-200 hover:text-white font-semibold text-xs py-2.5">
-                        Access Developer Terminal
-                      </Button>
+                    
+                    <a
+                      href="/developer-panel"
+                      className="flex items-center justify-center gap-2 w-full bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 hover:text-white transition-all font-bold text-xs py-2.5 rounded-xl shadow-md cursor-pointer"
+                    >
+                      <Terminal className="h-3.5 w-3.5" />
+                      Open Diagnostic Terminal
                     </a>
                   </div>
                 </div>
-              </ScrollArea>
-            ) : (
-              <>
-                {/* Channels Dropdown Selector */}
-                <div className="p-2.5 border-b border-zinc-200 bg-white flex items-center justify-between shadow-sm shrink-0">
-                  <span className="text-xs font-bold text-zinc-500 font-mono">Workspace Lobby:</span>
-                  <select
-                    value={selectedChannelId}
-                    onChange={(e) => setSelectedChannelId(e.target.value)}
-                    className="text-xs font-semibold bg-zinc-100 border-zinc-200 border rounded p-1 max-w-[180px]"
-                  >
-                    {channels.map((chan) => (
-                      <option key={chan.id} value={chan.id}>
-                        {chan.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+              )}
+            </div>
 
-                {/* Messages Loop */}
-                <ScrollArea className="flex-1 p-4" ref={scrollRef}>
-                  <div className="space-y-3 pb-3">
-                    {loadingMessages ? (
-                      <div className="flex justify-center py-6">
-                        <Loader2 className="h-6 w-6 animate-spin text-zinc-400" />
-                      </div>
-                    ) : (
-                      activeMessages.map((msg) => {
-                        const isSelf = msg.user_email === (user?.email || "guest@tareza.local");
-                        return (
-                          <div
-                            key={msg.id}
-                            className={`flex flex-col ${isSelf ? "items-end" : "items-start"}`}
-                          >
-                            <span className="text-[9px] text-zinc-400 font-semibold mb-0.5 px-1">
-                              {msg.user_email} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                            <div
-                              className={`px-3 py-2 rounded-xl text-xs max-w-[85%] leading-relaxed ${isSelf ? "bg-zinc-900 text-white rounded-tr-none" : "bg-white border text-zinc-800 rounded-tl-none shadow-sm"}`}
-                            >
-                              {msg.message}
-                            </div>
-                          </div>
-                        );
-                      })
-                    )}
-                  </div>
-                </ScrollArea>
-
-                {/* Message input */}
-                <form
-                  onSubmit={handleSendMessage}
-                  className="p-3 bg-white border-t border-zinc-200 flex gap-2 shrink-0 shadow-sm"
+            {/* Input Bar for Chat */}
+            {activeTab === 'chat' && (
+              <form 
+                onSubmit={handleSendMessage}
+                className="p-3 bg-white dark:bg-zinc-950 border-t border-zinc-200 dark:border-zinc-800/80 flex gap-2"
+              >
+                <input
+                  type="text"
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  placeholder="Ask for support..."
+                  className="flex-1 bg-zinc-100 dark:bg-zinc-900 text-xs px-3 py-2 rounded-xl outline-none border-b border-transparent focus:border-zinc-300 dark:focus:border-zinc-700 transition-all dark:text-white"
+                />
+                <button
+                  type="submit"
+                  disabled={!inputText.trim()}
+                  className="h-8 w-8 rounded-xl bg-zinc-900 dark:bg-white text-white dark:text-zinc-950 flex items-center justify-center hover:opacity-90 active:scale-95 transition-all disabled:opacity-50 disabled:pointer-events-none cursor-pointer"
                 >
-                  <Input
-                    value={inputText}
-                    onChange={(e) => setInputText(e.target.value)}
-                    placeholder="Type message to team members..."
-                    className="flex-1 h-9 text-xs bg-zinc-50 border-zinc-200 focus-visible:ring-zinc-800 rounded-lg"
-                    disabled={sending}
-                  />
-                  <Button
-                    type="submit"
-                    size="icon"
-                    className="h-9 w-9 bg-zinc-900 hover:bg-zinc-800 text-white rounded-lg shrink-0"
-                    disabled={!inputText.trim() || sending}
-                  >
-                    {sending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Send className="h-4 w-4" />
-                    )}
-                  </Button>
-                </form>
-              </>
+                  <Send className="h-3.5 w-3.5" />
+                </button>
+              </form>
             )}
-          </div>
-        </Card>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </>
   );
 }

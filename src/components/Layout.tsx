@@ -27,7 +27,6 @@ import { Sheet, SheetContent, SheetTrigger } from './ui/sheet';
 import { Input } from './ui/input';
 
 import { ThemeToggle } from './ThemeToggle';
-import { AIAssistant } from './AIAssistant';
 import { SyncManager } from './pos/SyncManager';
 import { SyncStatusIndicator } from './SyncStatusIndicator';
 import { TarezaLogo } from './ui/Logo';
@@ -244,7 +243,7 @@ export default function Layout() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-400" />
                 <Input 
                   type="search" 
-                  placeholder="Ask AIAssistant or search..." 
+                  placeholder="Search products, customers, reports..." 
                   className="pl-9 bg-zinc-100/50 dark:bg-zinc-900/50 border-transparent focus-visible:bg-white dark:focus-visible:bg-zinc-900 focus-visible:border-blue-500/50 shadow-none h-10 rounded-full text-sm" 
                 />
               </div>
@@ -298,7 +297,6 @@ export default function Layout() {
           </main>
         </div>
       </div>
-      <AIAssistant />
     </div>
   );
 }

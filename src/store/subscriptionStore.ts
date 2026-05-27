@@ -10,7 +10,6 @@ interface SubscriptionState {
   features: {
     maxBranches: number;
     maxUsers: number;
-    hasAIInsights: boolean;
     hasPrioritySupport: boolean;
   };
   
@@ -22,13 +21,13 @@ interface SubscriptionState {
 const getFeaturesForTier = (tier: PlanTier) => {
   switch (tier) {
     case 'starter':
-      return { maxBranches: 1, maxUsers: 3, hasAIInsights: false, hasPrioritySupport: false };
+      return { maxBranches: 1, maxUsers: 3, hasPrioritySupport: false };
     case 'sme':
-      return { maxBranches: 3, maxUsers: 10, hasAIInsights: true, hasPrioritySupport: false };
+      return { maxBranches: 3, maxUsers: 10, hasPrioritySupport: false };
     case 'enterprise':
-      return { maxBranches: 999, maxUsers: 999, hasAIInsights: true, hasPrioritySupport: true };
+      return { maxBranches: 999, maxUsers: 999, hasPrioritySupport: true };
     default:
-      return { maxBranches: 0, maxUsers: 1, hasAIInsights: false, hasPrioritySupport: false }; // Free / Expired
+      return { maxBranches: 0, maxUsers: 1, hasPrioritySupport: false }; // Free / Expired
   }
 };
 

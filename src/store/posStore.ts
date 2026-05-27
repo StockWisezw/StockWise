@@ -13,6 +13,7 @@ export type Product = {
   category?: string;
   imageUrl?: string;
   stock?: number;
+  code?: string;
 };
 
 export type Customer = {

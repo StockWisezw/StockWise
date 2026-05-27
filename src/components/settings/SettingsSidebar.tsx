@@ -12,7 +12,6 @@ import {
   Bell, 
   Lock, 
   Puzzle, 
-  Bot,
   Palette,
   Globe,
   CreditCard
@@ -37,7 +36,6 @@ const navItems = [
   { id: 'notifications', label: 'Notifications', icon: Bell },
   { id: 'security', label: 'Security & Backups', icon: Lock },
   { id: 'integrations', label: 'Integrations', icon: Puzzle },
-  { id: 'ai', label: 'AI & Automation', icon: Bot },
   { id: 'support', label: 'Help & Support', icon: Bell },
 ];
 

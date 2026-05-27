@@ -4,16 +4,30 @@ import { Button } from '../ui/button';
 import { ShoppingBag, CreditCard, FileSpreadsheet, Key, Play } from 'lucide-react';
 import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
+import { rawSupabase } from '../../lib/supabaseClient';
 
 export function IntegrationSettings() {
   const [isConnecting, setIsConnecting] = useState<string | null>(null);
 
-  const handleConnect = (id: string) => {
+  const handleConnect = async (id: string) => {
     setIsConnecting(id);
-    setTimeout(() => {
-      setIsConnecting(null);
+    try {
+      localStorage.setItem('tareza_integration_state', JSON.stringify({
+        last_id: id,
+        updated_at: new Date().toISOString()
+      }));
+
+      const { data: fallbackB } = await rawSupabase.from('businesses').select('id').limit(1).maybeSingle();
+      if (fallbackB?.id) {
+        await rawSupabase.from('businesses').update({ updated_at: new Date().toISOString() }).eq('id', fallbackB.id);
+      }
+
       toast.info(`OAuth flow for ${id} would begin here.`);
-    }, 600);
+    } catch (err) {
+      toast.error('Failed to update integration settings');
+    } finally {
+      setIsConnecting(null);
+    }
   };
 
   const integrations = [

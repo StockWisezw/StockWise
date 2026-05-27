@@ -5,6 +5,7 @@ import { Switch } from '../ui/switch';
 import { Label } from '../ui/label';
 import { ShoppingCart, Printer, ShieldCheck, Save, MonitorPlay, WifiOff } from 'lucide-react';
 import { toast } from 'sonner';
+import { rawSupabase } from '../../lib/supabaseClient';
 
 export function PosSettings() {
   const [isSaving, setIsSaving] = useState(false);
@@ -20,30 +21,38 @@ export function PosSettings() {
     }
   }, []);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     setIsSaving(true);
-    localStorage.setItem('tareza_offline_mode', String(offlineMode));
-    
-    // Register service worker if offline mode is enabled
-    if (offlineMode && 'serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').then((registration) => {
-        console.log('ServiceWorker registration successful with scope: ', registration.scope);
-      }).catch((err) => {
-        console.log('ServiceWorker registration failed: ', err);
-      });
-    }
+    try {
+      localStorage.setItem('tareza_offline_mode', String(offlineMode));
+      
+      // Register service worker if offline mode is enabled
+      if (offlineMode && 'serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/sw.js').then((registration) => {
+          console.log('ServiceWorker registration successful with scope: ', registration.scope);
+        }).catch((err) => {
+          console.log('ServiceWorker registration failed: ', err);
+        });
+      }
 
-    setTimeout(() => {
-      setIsSaving(false);
+      const { data: fallbackB } = await rawSupabase.from('businesses').select('id').limit(1).maybeSingle();
+      if (fallbackB?.id) {
+        await rawSupabase.from('businesses').update({ updated_at: new Date().toISOString() }).eq('id', fallbackB.id);
+      }
+
       toast.success('POS settings updated successfully. Reloading to apply changes...');
       
-      // If toggled, reload the page to re-initialize Firebase with/without offline DB
+      // If toggled, reload the page to apply changes
       if (initialOfflineMode !== offlineMode) {
-          setTimeout(() => {
-            window.location.reload();
-          }, 1500);
+        setTimeout(() => {
+          window.location.reload();
+        }, 800);
       }
-    }, 800);
+    } catch (err) {
+      toast.error('Failed to update POS settings');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (

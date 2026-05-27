@@ -311,14 +311,14 @@ export default function POS() {
       return;
     }
 
-    const isOffline = !navigator.onLine || localStorage.getItem('tareza_offline_mode') === 'true';
+    const isOffline = !navigator.onLine;
 
     const sale = completeSale({ isOffline });
     if (sale) {
       setLastSale(sale);
       setShowPayment(false);
       setShowPostSale(true);
-      toast.success(isOffline ? 'Sale Saved Offline!' : 'Sale Completed and Recorded!');
+      toast.success(isOffline ? 'Sale queued — will sync when online.' : 'Sale completed and recorded!');
       shouldPrintRef.current = true;
       
       if (!isOffline) {
@@ -460,7 +460,7 @@ export default function POS() {
           usePOSStore.setState((s: any) => ({
             offlineQueue: [...s.offlineQueue, offlineSale]
           }));
-          toast.warning('Network delay: Sale saved to offline queue and will sync automatically in the background.');
+          toast.warning('Could not save to database — sale queued for automatic retry.');
         }
       }
     } else {
@@ -527,10 +527,10 @@ export default function POS() {
   useEffect(() => {
     if (lastSale && shouldPrintRef.current) {
       // Small timeout to ensure ReceiptPrint renders with lastSale
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         handlePrint();
         shouldPrintRef.current = false;
-      }, 500);
+      });
     }
   }, [lastSale, handlePrint]);
 

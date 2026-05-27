@@ -65,8 +65,6 @@ export const auth = {
   }
 };
 
-console.log("[Supabase Client] Initialized successfully.");
-
 // Standard OperationType enums for compatibility
 export enum OperationType {
   CREATE = 'create',

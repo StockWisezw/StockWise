@@ -67,9 +67,7 @@ export default function ReceiptHistory() {
 
   const setSaleAndPrint = (sale: any) => {
     setSelectedSale(sale);
-    setTimeout(() => {
-      handlePrint();
-    }, 150);
+    requestAnimationFrame(() => handlePrint());
   };
 
   const exportCSV = () => {

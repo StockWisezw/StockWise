@@ -38,23 +38,13 @@ export function SyncStatusIndicator() {
     }
 
     setIsManualSyncing(true);
-    toast.promise(
-      new Promise<void>((resolve) => {
-        // Dispatch custom global event to notify SyncManager
-        window.dispatchEvent(new CustomEvent('tareza-trigger-sync'));
-        
-        // Wait 1.5s to let the background job execute, then resolve
-        setTimeout(() => {
-          setIsManualSyncing(false);
-          resolve();
-        }, 1500);
-      }),
-      {
-        loading: 'Connecting to database and verifying queue...',
-        success: 'Sync queue triggered! Live updates will begin instantly.',
-        error: 'Failed to trigger sync.'
-      }
-    );
+    // Dispatch custom global event to notify SyncManager
+    window.dispatchEvent(new CustomEvent('tareza-trigger-sync'));
+    toast.success('Sync queue triggered! Live updates will begin instantly.');
+    
+    setTimeout(() => {
+      setIsManualSyncing(false);
+    }, 800);
   };
 
   let triggerContent = null;

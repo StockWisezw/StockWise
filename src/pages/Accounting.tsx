@@ -37,6 +37,7 @@ interface Account {
   name: string;
   type: 'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense';
   balance: number;
+  is_system?: boolean;
 }
 
 interface JournalEntry {

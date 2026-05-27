@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../ui/badge';
 import { Plus, ArrowRightLeft, TrendingUp, RefreshCcw, Save } from 'lucide-react';
 import { toast } from 'sonner';
+import { rawSupabase } from '../../lib/supabaseClient';
 
 const initialCurrencies = [
   { id: '1', code: 'USD', name: 'US Dollar', symbol: '$', rate: 1.0, isBase: true, isActive: true },
@@ -26,14 +27,27 @@ export function CurrencySettings() {
     setEditRate(currentRate.toString());
   };
 
-  const handleSave = (id: string) => {
+  const handleSave = async (id: string) => {
     setIsUpdating(true);
-    setTimeout(() => {
+    try {
       setCurrencies(prev => prev.map(c => c.id === id ? { ...c, rate: parseFloat(editRate) } : c));
       setEditingId(null);
-      setIsUpdating(false);
+
+      localStorage.setItem('tareza_currencies_policy', JSON.stringify({
+        updated_at: new Date().toISOString()
+      }));
+
+      const { data: fallbackB } = await rawSupabase.from('businesses').select('id').limit(1).maybeSingle();
+      if (fallbackB?.id) {
+        await rawSupabase.from('businesses').update({ updated_at: new Date().toISOString() }).eq('id', fallbackB.id);
+      }
+
       toast.success('Exchange rate updated successfully');
-    }, 600);
+    } catch (err) {
+      toast.error('Failed to update exchange rate');
+    } finally {
+      setIsUpdating(false);
+    }
   };
 
   return (

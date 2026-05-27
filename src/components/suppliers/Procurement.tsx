@@ -415,11 +415,11 @@ export function Procurement() {
                         </Button>
                         
                         <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
+                          <DropdownMenuTrigger render={
                             <Button variant="ghost" size="icon" className="h-8 w-8">
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
-                          </DropdownMenuTrigger>
+                          } />
                           <DropdownMenuContent align="end" className="bg-white">
                             <DropdownMenuLabel>Status Actions</DropdownMenuLabel>
                             <DropdownMenuItem onClick={() => adjustStatusDirect(po, 'APPROVED')}>
