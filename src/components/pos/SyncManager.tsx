@@ -78,12 +78,16 @@ export function SyncManager() {
         // Prepare main sale payload
         const salePayload: any = {
           receipt_number: sale.receiptNumber,
+          receiptNumber: sale.receiptNumber,
           total: sale.total,
           vat_total: sale.vatTotal,
+          vatTotal: sale.vatTotal,
           discount_total: sale.discountTotal,
+          discountTotal: sale.discountTotal,
           subtotal: sale.subtotal || (sale.total - sale.vatTotal),
           payment_method: sale.payments.length > 0 ? sale.payments[0].method : 'cash',
           payments: sale.payments,
+          items: sale.items,
           status: 'COMPLETED',
           created_at: new Date(sale.timestamp).toISOString(),
           business_id: businessId,
@@ -98,6 +102,14 @@ export function SyncManager() {
         if (sale.customerId) {
           salePayload.customer_id = sale.customerId;
           salePayload.customerId = sale.customerId;
+          try {
+            const { data: custVal } = await rawSupabase.from('customers').select('name').eq('id', sale.customerId).maybeSingle();
+            salePayload.customerName = custVal?.name || 'Walk-In Customer';
+          } catch (e) {
+            salePayload.customerName = 'Walk-In Customer';
+          }
+        } else {
+          salePayload.customerName = 'Walk-In Customer';
         }
 
         // Step A: Insert Sale Record

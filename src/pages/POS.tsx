@@ -334,19 +334,36 @@ export default function POS() {
             if (businessData?.branch_id) branchId = businessData.branch_id;
           }
 
+          let customerNameVal = 'Walk-In Customer';
+          if (sale.customerId) {
+            const { data: custVal } = await supabase.from('customers').select('name').eq('id', sale.customerId).maybeSingle();
+            if (custVal?.name) {
+              customerNameVal = custVal.name;
+            }
+          }
+
           const salePayload: any = {
              receipt_number: sale.receiptNumber,
+             receiptNumber: sale.receiptNumber,
+             customerName: customerNameVal,
              total: sale.total,
              vat_total: sale.vatTotal,
+             vatTotal: sale.vatTotal,
              discount_total: sale.discountTotal,
+             discountTotal: sale.discountTotal,
              subtotal: sale.total - sale.vatTotal,
              payment_method: sale.payments.length > 0 ? sale.payments[0].method : 'cash',
              payments: sale.payments,
+             items: sale.items,
              status: 'COMPLETED',
              created_at: new Date().toISOString()
           };
           if (businessId) salePayload.business_id = businessId;
-          if (sale.customerId) salePayload.customer_id = sale.customerId;
+          if (branchId) salePayload.branch_id = branchId;
+          if (sale.customerId) {
+            salePayload.customer_id = sale.customerId;
+            salePayload.customerId = sale.customerId;
+          }
 
           const { data: saleDoc, error: saleErr } = await supabase.from('sales').insert([salePayload]).select().single();
 

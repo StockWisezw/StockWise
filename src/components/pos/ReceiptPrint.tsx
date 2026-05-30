@@ -22,7 +22,11 @@ export const ReceiptPrint = React.forwardRef<HTMLDivElement, ReceiptPrintProps>(
                 <p>VAT No: {taxNumber}</p>
                 <p className="mt-2">Receipt: {sale.receiptNumber}</p>
                 <p>{new Date(sale.timestamp).toLocaleString()}</p>
-                {sale.customerId && <p className="mt-1">Customer ID: {sale.customerId}</p>}
+                {(sale.customerName || sale.customerId) && (
+                  <p className="mt-1 font-semibold">
+                    Customer: {sale.customerName || "Walk-In Customer"}
+                  </p>
+                )}
               </div>
 
               <div className="border-t border-b border-dashed border-zinc-400 py-2 mb-2">

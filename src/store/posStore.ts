@@ -65,6 +65,9 @@ export type SaleRecord = {
   status: 'offline_pending' | 'synced' | 'parked' | 'refunded' | 'partially_refunded';
   receiptNumber: string;
   customerId?: string;
+  customerName?: string;
+  branchName?: string;
+  branch_id?: string;
 };
 
 interface POSState {
@@ -345,6 +348,7 @@ export const usePOSStore = create<POSState>()(
           status: isOffline ? 'offline_pending' : 'synced',
           receiptNumber: `RCPT-${Math.floor(Date.now() / 1000).toString(16).toUpperCase()}`,
           customerId: state.currentCustomer?.id,
+          customerName: state.currentCustomer?.name || 'Walk-In Customer',
         };
 
         set((state) => ({

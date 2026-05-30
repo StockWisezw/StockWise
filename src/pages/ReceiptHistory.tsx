@@ -25,6 +25,7 @@ export default function ReceiptHistory() {
   const [salesHistory, setSalesHistory] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
+  const [branches, setBranches] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const receiptRef = useRef<HTMLDivElement>(null);
 
@@ -44,12 +45,49 @@ export default function ReceiptHistory() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      const { data: bDataList } = await supabase.from('branches').select('*');
+      setBranches(bDataList || []);
+
       const { data: salesData } = await supabase.from('sales')
-        .select('*')
+        .select('*, sale_items(*, products(*))')
         .order('created_at', { ascending: false })
         .limit(50);
         
-      setSalesHistory(salesData || []);
+      const normalizedSales = (salesData || []).map(sale => {
+        let itemsList = sale.items;
+        if (!itemsList || !Array.isArray(itemsList) || itemsList.length === 0) {
+          itemsList = (sale.sale_items || []).map((si: any) => ({
+            id: si.id,
+            product: {
+              id: si.product_id,
+              name: si.products?.name || 'Unnamed Item',
+              retailPrice: si.unit_price,
+              wholesalePrice: si.unit_price,
+              sku: si.products?.sku || ''
+            },
+            quantity: si.quantity,
+            price: si.unit_price,
+            unitPrice: si.unit_price,
+            subtotal: si.line_total,
+            vatAmount: si.vat_amount
+          }));
+        } else {
+          // Double-check if product name is resolved correctly inside item.product
+          itemsList = itemsList.map((item: any) => ({
+            ...item,
+            product: {
+              ...item.product,
+              name: item.product?.name || item.name || 'Unnamed Item'
+            }
+          }));
+        }
+        return {
+          ...sale,
+          items: itemsList
+        };
+      });
+        
+      setSalesHistory(normalizedSales);
 
       const { data: custData } = await supabase.from('customers').select('*').order('name');
       setCustomers(custData || []);
@@ -371,25 +409,78 @@ export default function ReceiptHistory() {
       const totalAmountVal = subtotalSum + vatTotalVal;
 
       const saleId = crypto.randomUUID();
-      const payload = {
+      const payload: any = {
         id: saleId,
         business_id: businessId || null,
         branch_id: branchId || null,
         user_id: userData?.user?.id || null,
         customer_id: selectedCustomerId || null,
+        customerName: customerName,
+        receiptNumber: invoiceNumber,
         payments: [{ method: paymentMethod, amount: totalAmountVal }],
         subtotal: subtotalSum,
         vat_total: vatTotalVal,
+        vatTotal: vatTotalVal,
         discount_total: 0,
+        discountTotal: 0,
         total: totalAmountVal,
         payment_method: paymentMethod,
         status: paymentMethod === 'Invoice' ? 'UNPAID' : 'COMPLETED',
         receipt_number: invoiceNumber,
+        items: invoiceItems,
         created_at: new Date().toISOString()
       };
 
-      const { error } = await supabase.from('sales').insert(payload);
+      const { error } = await supabase.from('sales').insert([payload]);
       if (error) throw error;
+
+      // 1. Log sale items and update real-time stock levels
+      if (invoiceItems.length > 0) {
+        const itemsPayload = invoiceItems.map(item => ({
+          sale_id: saleId,
+          product_id: item.product.id,
+          quantity: item.quantity,
+          unit_price: item.price,
+          line_total: item.subtotal,
+          vat_amount: item.subtotal * 0.15
+        }));
+        await supabase.from('sale_items').insert(itemsPayload);
+
+        for (const item of invoiceItems) {
+          try {
+            await recordStockMovement(
+              businessId || 'default_business',
+              branchId || 'default_branch',
+              item.product.id,
+              -Math.abs(item.quantity), // negative for stock depletion
+              'POS_SALE',
+              userData?.user?.id || 'unknown',
+              invoiceNumber,
+              item.price
+            );
+          } catch (stkErr) {
+            console.warn('Unable to record stock movement:', stkErr);
+          }
+        }
+      }
+
+      // 2. Double-Entry Accounting postings
+      try {
+        const ledgerLines = [
+          { accountCode: '1100', debit: totalAmountVal, credit: 0, description: `Invoice layout ${invoiceNumber}` },
+          { accountCode: '4000', debit: 0, credit: totalAmountVal, description: `Invoice sales revenue [${invoiceNumber}]` }
+        ];
+        await postJournalEntry(
+          businessId || 'default_business',
+          branchId || 'default_branch',
+          userData?.user?.id || 'unknown',
+          invoiceNumber,
+          `Customer Invoice Manual Entry ${invoiceNumber}`,
+          ledgerLines
+        );
+      } catch (postErr) {
+        console.warn('Double-entry journal posting skipped:', postErr);
+      }
 
       toast.success(`Successfully created Invoice transaction ${invoiceNumber}!`);
       setIsCreateOpen(false);
@@ -672,9 +763,10 @@ export default function ReceiptHistory() {
               <TableRow className="bg-zinc-100 hover:bg-zinc-100">
                 <TableHead>Date / Time</TableHead>
                 <TableHead>Receipt #</TableHead>
+                <TableHead>Branch</TableHead>
                 <TableHead>Customer</TableHead>
+                <TableHead>Products</TableHead>
                 <TableHead>Payment Method</TableHead>
-                <TableHead>Items Count</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Total Amount</TableHead>
                 <TableHead className="text-right w-[150px]"></TableHead>
@@ -683,41 +775,52 @@ export default function ReceiptHistory() {
             <TableBody>
               {isLoading ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-zinc-500">
+                  <TableCell colSpan={10} className="text-center py-10 text-zinc-500">
                     Loading transactions history...
                   </TableCell>
                 </TableRow>
               ) : filteredSales.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-10 text-zinc-500 text-sm">
+                  <TableCell colSpan={10} className="text-center py-10 text-zinc-500 text-sm">
                     No past sales receipts found.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredSales.map(sale => (
-                  <TableRow 
-                    key={sale.id} 
-                    onClick={() => setSelectedSale(sale)}
-                    className={`hover:bg-zinc-50/50 transition-colors cursor-pointer group ${
-                      selectedSale?.id === sale.id 
-                        ? 'bg-blue-50/70 border-l-2 border-blue-600' 
-                        : ''
-                    }`}
-                  >
-                    <TableCell className="font-mono text-xs">
-                      {sale.created_at ? new Date(sale.created_at).toLocaleString() : new Date(sale.timestamp).toLocaleString()}
-                    </TableCell>
-                    <TableCell className="font-mono text-primary font-medium">{sale.receiptNumber}</TableCell>
-                    <TableCell className="font-semibold text-zinc-800">{sale.customerName || 'Walk-In Customer'}</TableCell>
-                    <TableCell className="text-xs text-zinc-600">{sale.payment_method || 'Cash'}</TableCell>
-                    <TableCell className="text-xs">{sale.items ? sale.items.length : 0} item(s)</TableCell>
-                    <TableCell>
-                      {getSaleStatusBadge(sale.status)}
-                    </TableCell>
-                    <TableCell className="text-right font-bold font-mono text-zinc-900">
-                      ${(sale.total_amount || sale.total || 0).toFixed(2)}
-                    </TableCell>
-                    <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                filteredSales.map(sale => {
+                  const saleBranch = branches.find(b => b.id === sale.branch_id);
+                  const resolvedBranchName = saleBranch ? saleBranch.name : 'Harare Branch';
+                  
+                  const productsStr = sale.items && Array.isArray(sale.items)
+                    ? sale.items.map((i: any) => `${i.product?.name || i.name || 'item'} (x${i.quantity})`).join(', ')
+                    : 'No items';
+
+                  return (
+                    <TableRow 
+                      key={sale.id} 
+                      onClick={() => setSelectedSale(sale)}
+                      className={`hover:bg-zinc-50/50 transition-colors cursor-pointer group ${
+                        selectedSale?.id === sale.id 
+                          ? 'bg-blue-50/70 border-l-2 border-blue-600' 
+                          : ''
+                      }`}
+                    >
+                      <TableCell className="font-mono text-xs">
+                        {sale.created_at ? new Date(sale.created_at).toLocaleString() : new Date(sale.timestamp).toLocaleString()}
+                      </TableCell>
+                      <TableCell className="font-mono text-primary font-medium">{sale.receiptNumber}</TableCell>
+                      <TableCell className="text-xs font-semibold text-zinc-700">{resolvedBranchName}</TableCell>
+                      <TableCell className="font-semibold text-zinc-800">{sale.customerName || 'Walk-In Customer'}</TableCell>
+                      <TableCell className="text-xs text-zinc-600 max-w-[220px] truncate" title={productsStr}>
+                        {productsStr}
+                      </TableCell>
+                      <TableCell className="text-xs text-zinc-650">{sale.payment_method || 'Cash'}</TableCell>
+                      <TableCell>
+                        {getSaleStatusBadge(sale.status)}
+                      </TableCell>
+                      <TableCell className="text-right font-bold font-mono text-zinc-900">
+                        ${(sale.total_amount || sale.total || 0).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center justify-end gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
                         <Dialog>
                           <DialogTrigger asChild>
@@ -775,7 +878,8 @@ export default function ReceiptHistory() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))
+                );
+              })
               )}
             </TableBody>
           </Table>
