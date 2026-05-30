@@ -4,7 +4,7 @@ import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Badge } from '../components/ui/badge';
-import { Search, Receipt, RefreshCcw, Download, ChevronRight, Plus, Trash2, Edit, CreditCard, ShoppingCart, User, X } from 'lucide-react';
+import { Search, Receipt, RefreshCcw, Download, ChevronRight, ChevronDown, Plus, Trash2, Edit, CreditCard, ShoppingCart, User, X } from 'lucide-react';
 import { usePOSStore, SaleRecord } from '../store/posStore';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogTrigger } from '../components/ui/dialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../components/ui/dropdown-menu';
@@ -14,10 +14,14 @@ import { ReceiptPrint } from '../components/pos/ReceiptPrint';
 import { toast } from 'sonner';
 import { supabase, db, doc, getDoc, updateDoc } from '../lib/supabaseClient';
 import { recordStockMovement, postJournalEntry, logAuditEvent } from '../services/ledgerService';
+import { jsPDF } from 'jspdf';
 
 export default function ReceiptHistory() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSale, setSelectedSale] = useState<any | null>(null);
+  const [businessName, setBusinessName] = useState('Tareza Retail');
+  const [branchName, setBranchName] = useState('Harare Branch');
+  const [taxNumber, setTaxNumber] = useState('BP123456789');
   const [salesHistory, setSalesHistory] = useState<any[]>([]);
   const [customers, setCustomers] = useState<any[]>([]);
   const [products, setProducts] = useState<any[]>([]);
@@ -53,9 +57,40 @@ export default function ReceiptHistory() {
       const { data: prodData } = await supabase.from('products').select('*').eq('is_active', true).order('name');
       setProducts(prodData || []);
 
+      // Attempt to load current Business and Branch info for professional receipts
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user) {
+        const { data: bUser } = await supabase.from('business_users')
+          .select('business_id, branch_id')
+          .eq('user_id', userData.user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (bUser?.business_id) {
+          const { data: bData } = await supabase.from('businesses')
+            .select('name, tax_number')
+            .eq('id', bUser.business_id)
+            .maybeSingle();
+          if (bData) {
+            if (bData.name) setBusinessName(bData.name);
+            if (bData.tax_number) setTaxNumber(bData.tax_number);
+          }
+
+          if (bUser.branch_id) {
+            const { data: branchData } = await supabase.from('branches')
+              .select('name')
+              .eq('id', bUser.branch_id)
+              .maybeSingle();
+            if (branchData?.name) {
+              setBranchName(branchData.name);
+            }
+          }
+        }
+      }
+
     } catch (err) {
-      console.error('Failed to load transaction history details:', err);
-      toast.error('Could not load history');
+      console.error('Failed to load transaction history details + business profile:', err);
+      toast.error('Could not load history details completely');
     } finally {
       setIsLoading(false);
     }
@@ -98,6 +133,168 @@ export default function ReceiptHistory() {
     link.click();
     document.body.removeChild(link);
     toast.success('Past receipts logs exported');
+  };
+
+  const downloadSelectedPDF = () => {
+    if (!selectedSale) {
+      toast.error('Please click on a specific transaction row in the table below to select it first.');
+      return;
+    }
+
+    const sale = selectedSale;
+    const items = sale.items || [];
+    const payments = sale.payments || [];
+
+    // Calculate dimensions
+    const itemsSize = items.length;
+    const paymentsSize = payments.length;
+    const calculatedHeight = 110 + (itemsSize * 9) + (paymentsSize * 6);
+    const pageHeight = Math.max(160, calculatedHeight);
+
+    // Create jsPDF instance
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: [80, pageHeight]
+    });
+
+    let y = 10;
+
+    // Helper draw functions
+    const drawCenterText = (text: string, fontSize: number, style: 'normal' | 'bold' | 'italic' = 'normal') => {
+      doc.setFont('courier', style);
+      doc.setFontSize(fontSize);
+      doc.text(text, 40, y, { align: 'center' });
+      y += (fontSize * 0.45) + 1.5;
+    };
+
+    const drawLeftRight = (left: string, right: string, fontSize: number = 8, style: 'normal' | 'bold' = 'normal') => {
+      doc.setFont('courier', style);
+      doc.setFontSize(fontSize);
+      doc.text(left, 6, y, { align: 'left' });
+      doc.text(right, 74, y, { align: 'right' });
+      y += (fontSize * 0.45) + 1.5;
+    };
+
+    const drawDashedLine = () => {
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(8);
+      doc.text('------------------------------------------', 40, y, { align: 'center' });
+      y += 4;
+    };
+
+    // Header Details (ReceiptPrint style)
+    drawCenterText(businessName.toUpperCase(), 12, 'bold');
+    drawCenterText(branchName, 8, 'normal');
+    drawCenterText(`VAT No: ${taxNumber}`, 8, 'normal');
+    y += 1.5;
+    drawCenterText(`Receipt: ${sale.receiptNumber}`, 8, 'bold');
+    
+    // Correctly resolve date
+    const saleDateStr = sale.created_at ? new Date(sale.created_at).toLocaleString() : (sale.timestamp ? new Date(sale.timestamp).toLocaleString() : new Date().toLocaleString());
+    drawCenterText(saleDateStr, 8, 'normal');
+
+    if (sale.customerId || sale.customer_id) {
+      drawCenterText(`Customer: ${sale.customerName || 'Walk-In'}`, 8, 'normal');
+    }
+    y += 1.5;
+
+    // Items Section
+    drawDashedLine();
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(8);
+    doc.text('Item', 6, y, { align: 'left' });
+    doc.text('Qty', 55, y, { align: 'right' });
+    doc.text('Total', 74, y, { align: 'right' });
+    y += 4.5;
+    drawDashedLine();
+
+    // Render each cart item row
+    items.forEach((item: any) => {
+      const pName = item.product?.name || item.name || 'Unnamed Item';
+      const cleanName = pName.length > 22 ? pName.substring(0, 20) + '..' : pName;
+      const qty = String(item.quantity);
+      
+      const itemSub = item.subtotal || ((item.price || item.product?.price || 0) * item.quantity);
+      const itemVat = item.vatAmount || 0;
+      const itemTotalFormatted = `$${(itemSub + itemVat).toFixed(2)}`;
+
+      drawLeftRight(cleanName, itemTotalFormatted, 8, 'normal');
+      // Render Qty position custom
+      doc.setFont('courier', 'normal');
+      doc.setFontSize(8);
+      doc.text(qty, 55, y - 8 * 0.45 - 1.5, { align: 'right' });
+
+      if (item.discount) {
+        const discStr = item.discount.type === 'percentage' ? `${item.discount.value}%` : `$${item.discount.value}`;
+        drawCenterText(`  (-${discStr} discount included)`, 7.5, 'italic');
+      }
+    });
+
+    drawDashedLine();
+
+    // Financial totals
+    const totalAmountFloat = Number(sale.total_amount || sale.total || 0).toFixed(2);
+    const subtotalFloat = Number(sale.subtotal || (sale.total / 1.15) || 0).toFixed(2);
+    const discountFloat = Number(sale.discountTotal || sale.discount_total || 0).toFixed(2);
+    const vatTotalFloat = Number(sale.vatTotal || sale.vat_total || 0).toFixed(2);
+
+    drawLeftRight('Subtotal:', `$${subtotalFloat}`);
+    if (Number(discountFloat) > 0) {
+      drawLeftRight('Discount:', `-$${discountFloat}`);
+    }
+    drawLeftRight('VAT (15%):', `$${vatTotalFloat}`);
+
+    // Draw total underline
+    doc.setDrawColor(120, 120, 120);
+    doc.setLineWidth(0.25);
+    doc.line(6, y - 0.5, 74, y - 0.5);
+    y += 2;
+
+    drawLeftRight('TOTAL (USD):', `$${totalAmountFloat}`, 9.5, 'bold');
+    
+    drawDashedLine();
+
+    // Payments detail list
+    drawCenterText('PAYMENTS', 8, 'bold');
+    let paymentsTotalSum = 0;
+
+    if (payments.length > 0) {
+      payments.forEach((p: any) => {
+        const pMethodStr = (p.method || 'CASH').replace('_', ' ').toUpperCase();
+        const pAmt = Number(p.amount || 0);
+        paymentsTotalSum += pAmt;
+        drawLeftRight(pMethodStr, `$${pAmt.toFixed(2)}`, 8, 'normal');
+      });
+    } else {
+      const pMethodStr = (sale.payment_method || 'CASH').toUpperCase();
+      const pAmt = Number(sale.total_amount || sale.total || 0);
+      paymentsTotalSum = pAmt;
+      drawLeftRight(pMethodStr, `$${pAmt.toFixed(2)}`, 8, 'normal');
+    }
+
+    if (paymentsTotalSum > Number(totalAmountFloat)) {
+      const changeFloat = (paymentsTotalSum - Number(totalAmountFloat)).toFixed(2);
+      drawLeftRight('CHANGE', `$${changeFloat}`, 8.5, 'bold');
+    }
+
+    drawDashedLine();
+
+    // Compliance / Tax footer
+    drawCenterText('SALES TAX INVOICE', 7.5, 'bold');
+    drawCenterText(`Receipt #${sale.receiptNumber}`, 7.5, 'normal');
+
+    y += 1.5;
+    const resolvedStatus = sale.status === 'offline_pending' ? 'Offline Queue - Sync Pending' : 'Synced Online';
+    drawCenterText(resolvedStatus.toUpperCase(), 7.5, 'bold');
+    
+    y += 4;
+    drawCenterText('*** Thank you for your business! ***', 7.5, 'normal');
+    drawCenterText('Generated by Tareza POS & ERP', 7, 'normal');
+
+    // Trigger PDF browser save
+    doc.save(`receipt_${sale.receiptNumber}.pdf`);
+    toast.success(`Exported Receipt ${sale.receiptNumber} as high-fidelity PDF!`);
   };
 
   const generateInvoiceNumber = () => {
@@ -405,9 +602,35 @@ export default function ReceiptHistory() {
           <Button variant="outline" className="bg-white shadow-sm" onClick={() => window.print()}>
             Print All
           </Button>
-          <Button variant="outline" onClick={exportCSV}>
-            <Download className="mr-2 h-4 w-4" /> Export CSV
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger 
+              render={
+                <Button variant="outline" className="bg-white shadow-sm flex items-center">
+                  <Download className="mr-2 h-4 w-4 text-zinc-500" /> Export <ChevronDown className="ml-1.5 h-3.5 w-3.5 text-zinc-400" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end" className="bg-white p-1 shadow-md border rounded-md min-w-[220px]">
+              <DropdownMenuItem onClick={exportCSV} className="text-zinc-700 hover:bg-zinc-100 cursor-pointer text-xs py-2 px-3 justify-start flex items-center">
+                <Download className="mr-2 h-3.5 w-3.5 text-zinc-400" /> Export All as CSV
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                onClick={downloadSelectedPDF} 
+                className={`text-zinc-700 hover:bg-zinc-100 cursor-pointer text-xs py-2 px-3 justify-start flex items-center ${!selectedSale ? 'opacity-50 cursor-not-allowed' : ''}`}
+                disabled={!selectedSale}
+              >
+                {selectedSale ? (
+                  <>
+                    <Receipt className="mr-2 h-3.5 w-3.5 text-blue-500 animate-pulse" /> Download {selectedSale.receiptNumber} PDF
+                  </>
+                ) : (
+                  <>
+                    <Receipt className="mr-2 h-3.5 w-3.5 text-zinc-300" /> Choose Receipt (Select Row)
+                  </>
+                )}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
           <Button className="bg-blue-600 text-white hover:bg-blue-700 shadow-sm" onClick={openInvoiceDialog}>
             <Plus className="mr-2 h-4 w-4" /> Create Invoice
           </Button>
@@ -464,7 +687,15 @@ export default function ReceiptHistory() {
                     (s.customerName && s.customerName.toLowerCase().includes(searchTerm.toLowerCase()))
                   )
                   .map(sale => (
-                  <TableRow key={sale.id} className="hover:bg-zinc-50/50 transition-colors cursor-pointer group">
+                  <TableRow 
+                    key={sale.id} 
+                    onClick={() => setSelectedSale(sale)}
+                    className={`hover:bg-zinc-50/50 transition-colors cursor-pointer group ${
+                      selectedSale?.id === sale.id 
+                        ? 'bg-blue-50/70 border-l-2 border-blue-600' 
+                        : ''
+                    }`}
+                  >
                     <TableCell className="font-mono text-xs">
                       {sale.created_at ? new Date(sale.created_at).toLocaleString() : new Date(sale.timestamp).toLocaleString()}
                     </TableCell>
