@@ -591,6 +591,19 @@ export default function ReceiptHistory() {
     return <Badge className="bg-emerald-100 text-emerald-800 border-0 hover:bg-emerald-100 font-semibold text-xs">Paid / Complete</Badge>;
   };
 
+  // Only show previous sales receipts (exclude unpaid/invoice transactions)
+  const filteredSales = salesHistory.filter(s => {
+    const isInvoice = (s.payment_method || '').toLowerCase() === 'invoice' || s.status === 'UNPAID';
+    if (isInvoice) return false;
+    
+    if (searchTerm) {
+      const matchReceipt = s.receiptNumber?.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchCustomer = s.customerName?.toLowerCase().includes(searchTerm.toLowerCase());
+      return !!(matchReceipt || matchCustomer);
+    }
+    return true;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -621,7 +634,7 @@ export default function ReceiptHistory() {
               >
                 {selectedSale ? (
                   <>
-                    <Receipt className="mr-2 h-3.5 w-3.5 text-blue-500 animate-pulse" /> Download {selectedSale.receiptNumber} PDF
+                     <Receipt className="mr-2 h-3.5 w-3.5 text-blue-500 animate-pulse" /> Download {selectedSale.receiptNumber} PDF
                   </>
                 ) : (
                   <>
@@ -674,19 +687,14 @@ export default function ReceiptHistory() {
                     Loading transactions history...
                   </TableCell>
                 </TableRow>
-              ) : salesHistory.length === 0 ? (
+              ) : filteredSales.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={8} className="text-center py-10 text-zinc-500 text-sm">
-                    No past transactions found. Choose "Create Invoice" inside header to generate one manually.
+                    No past sales receipts found.
                   </TableCell>
                 </TableRow>
               ) : (
-                salesHistory
-                  .filter(s => 
-                    s.receiptNumber.includes(searchTerm) || 
-                    (s.customerName && s.customerName.toLowerCase().includes(searchTerm.toLowerCase()))
-                  )
-                  .map(sale => (
+                filteredSales.map(sale => (
                   <TableRow 
                     key={sale.id} 
                     onClick={() => setSelectedSale(sale)}

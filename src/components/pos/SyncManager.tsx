@@ -133,7 +133,10 @@ export function SyncManager() {
         console.log(`[SyncManager] Sale with receipt ${sale.receiptNumber} already exists in database. Skipping row insert.`);
       }
 
-      // Step C: Trigger secondary accounting and warehouse routines (wrapped safely in catches)
+      const isNewSale = !existingSale;
+
+      if (isNewSale) {
+        // Step C: Trigger secondary accounting and warehouse routines (wrapped safely in catches)
       
       // 1. Stock Movements
       try {
@@ -251,6 +254,7 @@ export function SyncManager() {
         );
       } catch (e) {
         console.warn('[SyncManager] Audit log write bypassed:', e);
+      }
       }
 
       // Step D: Clean Removal & Success Toast

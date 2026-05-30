@@ -314,6 +314,21 @@ export async function recordStockMovement(
       currentQty = Number(invDoc.quantity || 0);
     }
 
+    // 0. Idempotency Check: prevent duplicate stock movement execution for the same transaction reference
+    if (associatedTxRef) {
+      const { data: duplicateMovement } = await supabase.from('stock_movements')
+        .eq('reference', associatedTxRef)
+        .eq('product_id', productId)
+        .eq('type', type)
+        .limit(1)
+        .maybeSingle();
+
+      if (duplicateMovement) {
+        console.log(`[recordStockMovement] Idempotency guard triggered: Stock movement for product ${productId} and reference ${associatedTxRef} already processed. Skipping duplicate subtraction.`);
+        return { success: true, quantityAfter: currentQty };
+      }
+    }
+
     const calculatedQtyAfter = currentQty + quantityChange;
 
     // Reject negative inventory checkout unless explicitly tolerated (or fallback)
