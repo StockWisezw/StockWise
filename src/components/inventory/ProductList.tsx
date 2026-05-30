@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Plus, Filter, Download, MoreHorizontal, Settings2, ArrowUpDown, Printer } from 'lucide-react';
+import { Search, Plus, Filter, Download, MoreHorizontal, Settings2, ArrowUpDown, Printer, Edit3, Check, RotateCcw, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -28,6 +28,11 @@ export function ProductList() {
   // Branch configuration states
   const [branches, setBranches] = useState<any[]>([]);
   const [selectedBranchId, setSelectedBranchId] = useState<string>('');
+
+  // Inline editing state
+  const [isInlineEditMode, setIsInlineEditMode] = useState(false);
+  const [editedFields, setEditedFields] = useState<Record<string, { retail_price: string; wholesale_price: string; stock: string }>>({});
+  const [isSavingInline, setIsSavingInline] = useState<Record<string, boolean>>({});
   
   // Add Product Form State
   const [newProductName, setNewProductName] = useState('');
@@ -204,6 +209,112 @@ export function ProductList() {
     }
   };
 
+  const handleSaveRow = async (item: any, stockRecord: any) => {
+    const rowEdit = editedFields[item.id];
+    if (!rowEdit) return;
+
+    // Parse values
+    const newRetail = parseFloat(rowEdit.retail_price);
+    const newWholesale = parseFloat(rowEdit.wholesale_price);
+    const newStock = parseInt(rowEdit.stock, 10);
+
+    if (isNaN(newRetail) || isNaN(newWholesale) || isNaN(newStock)) {
+      toast.error("Please enter valid numeric values for prices and stock");
+      return;
+    }
+
+    setIsSavingInline(prev => ({ ...prev, [item.id]: true }));
+
+    try {
+      // 1. Update product retail_price & wholesale_price
+      const { error: productError } = await supabase
+        .from('products')
+        .update({
+          retail_price: newRetail,
+          wholesale_price: newWholesale,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', item.id);
+
+      if (productError) throw productError;
+
+      // 2. Update stock quantity
+      const { data: userData } = await supabase.auth.getUser();
+      let businessId = null;
+
+      if (userData?.user) {
+        const { data: businessData } = await supabase
+          .from('business_users')
+          .select('business_id')
+          .eq('user_id', userData.user.id)
+          .limit(1)
+          .maybeSingle();
+
+        if (businessData) {
+          businessId = businessData.business_id;
+        }
+      }
+
+      // Determine branch ID
+      const branchIdToUse = selectedBranchId || stockRecord?.branch_id || (branches.length > 0 ? branches[0].id : null);
+
+      if (branchIdToUse) {
+        // Find if inventory record exists for this product and branch
+        const { data: existingRecords } = await supabase
+          .from('inventory')
+          .select('*')
+          .eq('product_id', item.id)
+          .eq('branch_id', branchIdToUse);
+
+        if (existingRecords && existingRecords.length > 0) {
+          // Update
+          const { error: inventoryError } = await supabase
+            .from('inventory')
+            .update({
+              quantity: newStock,
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingRecords[0].id);
+
+          if (inventoryError) throw inventoryError;
+        } else {
+          // Insert new
+          const { error: inventoryError } = await supabase
+            .from('inventory')
+            .insert({
+              id: crypto.randomUUID(),
+              business_id: businessId,
+              branch_id: branchIdToUse,
+              product_id: item.id,
+              quantity: newStock,
+              reorder_level: 10,
+              created_at: new Date().toISOString()
+            });
+
+          if (inventoryError) throw inventoryError;
+        }
+      }
+
+      // Success! Update local lists so updates are immediately visible
+      toast.success(`Updated "${item.name}" successfully!`);
+
+      // Remove row edit from state
+      setEditedFields(prev => {
+        const updated = { ...prev };
+        delete updated[item.id];
+        return updated;
+      });
+
+      // Refresh list to pull latest data
+      fetchProducts();
+    } catch (err: any) {
+      console.error("Inline save error", err);
+      toast.error(`Error saving changes: ${err.message || 'Unknown error'}`);
+    } finally {
+      setIsSavingInline(prev => ({ ...prev, [item.id]: false }));
+    }
+  };
+
   const exportCSV = () => {
     if (products.length === 0) {
       toast.error('No products to export');
@@ -293,6 +404,19 @@ export function ProductList() {
           )}
         </div>
         <div className="flex flex-wrap items-center gap-2 w-full lg:w-auto">
+          <Button 
+            variant={isInlineEditMode ? "default" : "outline"} 
+            className={`shadow-sm ${isInlineEditMode ? 'bg-indigo-600 hover:bg-indigo-700 text-white border-transparent' : 'bg-white'}`}
+            onClick={() => {
+              setIsInlineEditMode(!isInlineEditMode);
+              if (isInlineEditMode) {
+                setEditedFields({});
+              }
+            }}
+          >
+            <Edit3 className="mr-2 h-4 w-4" />
+            {isInlineEditMode ? "Exit Quick Edit" : "Quick Edit"}
+          </Button>
           <Button variant="outline" className="bg-white shadow-sm" onClick={() => toast.info('Please use the "Bulk Import" tab to import products.')}>Import</Button>
           <Button variant="outline" className="bg-white shadow-sm" onClick={() => window.print()}><Printer className="mr-2 h-4 w-4" /> Print</Button>
           <Button variant="outline" className="bg-white shadow-sm" onClick={exportCSV}><Download className="mr-2 h-4 w-4" /> Export</Button>
@@ -387,6 +511,18 @@ export function ProductList() {
                   ? item.inventory?.find((i: any) => i.branch_id === selectedBranchId)
                   : item.inventory?.[0];
                 const stock = stockRecord ? stockRecord.quantity : 0;
+
+                const rowEdit = editedFields[item.id] || {
+                  retail_price: item.retail_price?.toString() || '0',
+                  wholesale_price: item.wholesale_price?.toString() || '0',
+                  stock: stock.toString()
+                };
+
+                const isDirty = 
+                  parseFloat(rowEdit.retail_price) !== item.retail_price ||
+                  parseFloat(rowEdit.wholesale_price) !== item.wholesale_price ||
+                  parseInt(rowEdit.stock, 10) !== stock;
+
                 return (
                 <TableRow key={item.id} className="hover:bg-zinc-50/50 cursor-pointer group">
                   <TableCell>
@@ -402,25 +538,136 @@ export function ProductList() {
                   </TableCell>
                   <TableCell className="font-semibold text-zinc-900">{item.name}</TableCell>
                   <TableCell><Badge variant="secondary" className="font-normal text-xs">{item.categories?.name || 'Uncategorized'}</Badge></TableCell>
-                  <TableCell className="text-right font-mono font-bold text-zinc-900">{stock}</TableCell>
-                  <TableCell className="text-right font-mono">${item.retail_price?.toFixed(2)}</TableCell>
-                  <TableCell className="text-right font-mono text-zinc-500">${item.wholesale_price?.toFixed(2)}</TableCell>
-                  <TableCell>{getStatusBadge(stock)}</TableCell>
-                  <TableCell>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger 
-                        render={
-                          <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <MoreHorizontal className="h-4 w-4 text-zinc-500" />
-                          </Button>
-                        } 
+                  
+                  {/* Stock Column */}
+                  <TableCell className="text-right font-mono font-bold text-zinc-900">
+                    {isInlineEditMode ? (
+                      <Input
+                        type="number"
+                        value={rowEdit.stock}
+                        onChange={(e) => {
+                          setEditedFields((prev) => ({
+                            ...prev,
+                            [item.id]: {
+                              ...rowEdit,
+                              stock: e.target.value
+                            }
+                          }));
+                        }}
+                        className="w-20 ml-auto text-right font-mono text-xs h-8 px-2 border-zinc-200 bg-white"
                       />
-                      <DropdownMenuContent align="end" className="w-48">
-                        <DropdownMenuItem>Edit Product</DropdownMenuItem>
-                        <DropdownMenuItem>Adjust Stock</DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-600">Delete Product</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    ) : (
+                      stock
+                    )}
+                  </TableCell>
+
+                  {/* Retail Column */}
+                  <TableCell className="text-right font-mono">
+                    {isInlineEditMode ? (
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-zinc-400 text-xs">$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={rowEdit.retail_price}
+                          onChange={(e) => {
+                            setEditedFields((prev) => ({
+                              ...prev,
+                              [item.id]: {
+                                ...rowEdit,
+                                retail_price: e.target.value
+                              }
+                            }));
+                          }}
+                          className="w-24 text-right font-mono text-xs h-8 px-2 border-zinc-200 bg-white"
+                        />
+                      </div>
+                    ) : (
+                      `$${item.retail_price?.toFixed(2)}`
+                    )}
+                  </TableCell>
+
+                  {/* Wholesale Column */}
+                  <TableCell className="text-right font-mono text-zinc-500">
+                    {isInlineEditMode ? (
+                      <div className="flex items-center justify-end gap-1">
+                        <span className="text-zinc-400 text-xs">$</span>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={rowEdit.wholesale_price}
+                          onChange={(e) => {
+                            setEditedFields((prev) => ({
+                              ...prev,
+                              [item.id]: {
+                                ...rowEdit,
+                                wholesale_price: e.target.value
+                              }
+                            }));
+                          }}
+                          className="w-24 text-right font-mono text-xs h-8 px-2 border-zinc-200 bg-white"
+                        />
+                      </div>
+                    ) : (
+                      `$${item.wholesale_price?.toFixed(2)}`
+                    )}
+                  </TableCell>
+
+                  <TableCell>{getStatusBadge(isInlineEditMode ? parseInt(rowEdit.stock, 10) || 0 : stock)}</TableCell>
+                  
+                  {/* Actions Column */}
+                  <TableCell className="text-right">
+                    {isInlineEditMode ? (
+                      <div className="flex items-center gap-1.5 justify-end">
+                        {isSavingInline[item.id] ? (
+                          <Loader2 className="h-4 w-4 animate-spin text-zinc-500" />
+                        ) : (
+                          <>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              disabled={!isDirty}
+                              onClick={() => handleSaveRow(item, stockRecord)}
+                              className={`h-7 w-7 rounded-md p-0 ${isDirty ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-950/30' : 'text-zinc-300'}`}
+                              title="Save Changes"
+                            >
+                              <Check className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              disabled={!isDirty}
+                              onClick={() => {
+                                setEditedFields((prev) => {
+                                  const updated = { ...prev };
+                                  delete updated[item.id];
+                                  return updated;
+                                });
+                              }}
+                              className={`h-7 w-7 rounded-md p-0 ${isDirty ? 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800' : 'text-zinc-300'}`}
+                              title="Revert to Original"
+                            >
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </Button>
+                          </>
+                        )}
+                      </div>
+                    ) : (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger 
+                          render={
+                            <Button variant="ghost" className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                              <MoreHorizontal className="h-4 w-4 text-zinc-500" />
+                            </Button>
+                          } 
+                        />
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuItem>Edit Product</DropdownMenuItem>
+                          <DropdownMenuItem>Adjust Stock</DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleDelete(item.id)} className="text-red-600">Delete Product</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
                   </TableCell>
                 </TableRow>
                 )

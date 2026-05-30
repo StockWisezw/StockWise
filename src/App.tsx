@@ -23,6 +23,7 @@ import Reports from './pages/Reports';
 import CashManagement from './pages/CashManagement';
 import Accounting from './pages/Accounting';
 import { Toaster } from './components/ui/sonner';
+import { syncRBZExchangeRates } from './services/currencyService';
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
@@ -35,6 +36,13 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function App() {
+  React.useEffect(() => {
+    // Non-blocking background sync of exchange rates daily
+    syncRBZExchangeRates(false).catch(err => {
+      console.warn('Background currency rate sync soft failure:', err);
+    });
+  }, []);
+
   return (
     <ErrorBoundary>
       <ThemeProvider defaultTheme="system" disableTransitionOnChange>
