@@ -91,6 +91,7 @@ export default function Accounting() {
   const [newAcctType, setNewAcctType] = useState<'Asset' | 'Liability' | 'Equity' | 'Revenue' | 'Expense'>('Asset');
   const [newAcctBalance, setNewAcctBalance] = useState('0');
   const [showCOAModal, setShowCOAModal] = useState(false);
+  const [showResetDialog, setShowResetDialog] = useState(false);
 
   // Global filters
   const [coaSearch, setCoaSearch] = useState('');
@@ -296,11 +297,45 @@ export default function Accounting() {
       await initializeChartOfAccounts(businessId);
 
       // 2. Load accounts
-      const acctsRes = await supabase.from('accounts')
+      let acctsRes = await supabase.from('accounts')
         .eq('business_id', businessId)
         .select('*');
       
-      const sortedAccounts = (acctsRes.data || []).sort((a: any, b: any) => a.code.localeCompare(b.code));
+      let initialAccounts = acctsRes.data || [];
+      
+      // Auto-purge old mock balances in the user's workspace database if present
+      const hasPurged = localStorage.getItem('tareza_ledger_mock_purged_v2');
+      if (!hasPurged && initialAccounts.length > 0) {
+        let updatedAny = false;
+        for (const acct of initialAccounts) {
+          let adjustment = 0;
+          if (acct.code === '1000') {
+            adjustment = 1000;
+          } else if (acct.code === '1200') {
+            adjustment = 5000;
+          } else if (acct.code === '3000') {
+            adjustment = 6000;
+          }
+          
+          if (adjustment > 0) {
+            const newBalance = Math.max(0, Number(acct.balance || 0) - adjustment);
+            await supabase.from('accounts').update({ balance: newBalance }).eq('id', acct.id);
+            acct.balance = newBalance;
+            updatedAny = true;
+          }
+        }
+        localStorage.setItem('tareza_ledger_mock_purged_v2', 'true');
+        if (updatedAny) {
+          toast.success('Demonstration mock ledger balances successfully purged! Displaying clean production data.');
+          // Reload the updated data
+          acctsRes = await supabase.from('accounts')
+            .eq('business_id', businessId)
+            .select('*');
+          initialAccounts = acctsRes.data || [];
+        }
+      }
+
+      const sortedAccounts = initialAccounts.sort((a: any, b: any) => a.code.localeCompare(b.code));
       setAccounts(sortedAccounts);
 
       // 3. Load journal entries and lines
@@ -480,6 +515,57 @@ export default function Accounting() {
     }
   };
 
+  const handleResetLedger = async () => {
+    try {
+      setLoading(true);
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return;
+
+      const { data: businessData } = await supabase.from('business_users')
+        .select('business_id')
+        .eq('user_id', userData.user.id)
+        .limit(1)
+        .maybeSingle();
+
+      const businessId = businessData?.business_id || 'default_business';
+
+      // 1. Reset all accounts to 0.00
+      const { data: accts } = await supabase.from('accounts').eq('business_id', businessId).select('id');
+      if (accts && accts.length > 0) {
+        for (const acct of accts) {
+          await supabase.from('accounts').update({ balance: 0 }).eq('id', acct.id);
+        }
+      }
+
+      // 2. Delete journal entries and lines for this business
+      const { data: jEntries } = await supabase.from('journal_entries').select('id').eq('business_id', businessId);
+      if (jEntries && jEntries.length > 0) {
+        for (const je of jEntries) {
+          await supabase.from('journal_lines').delete().eq('journal_entry_id', je.id);
+        }
+      }
+      await supabase.from('journal_entries').delete().eq('business_id', businessId);
+      
+      // 3. Log audit event
+      await logAuditEvent(
+        businessId,
+        userData.user.id,
+        'VOID',
+        'ACCOUNTING',
+        null,
+        { message: 'General Ledger was completely reset to clean state' }
+      );
+
+      toast.success('Pristine ledger state restored. All accounts reset to $0.00.');
+      localStorage.setItem('tareza_ledger_mock_purged_v2', 'true');
+      await loadAllAccountingData();
+    } catch (err: any) {
+      toast.error('Failed to reset ledger: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const addManualLine = () => {
     setLines([...lines, { accountCode: '', debit: 0, credit: 0 }]);
   };
@@ -557,6 +643,36 @@ export default function Accounting() {
           <Button onClick={loadAllAccountingData} variant="outline" size="sm" className="bg-white">
             <RefreshCcw className="w-4 h-4 mr-2" /> Refresh State
           </Button>
+
+          <Dialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+            <DialogTrigger asChild>
+              <Button variant="outline" size="sm" className="border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700 bg-white">
+                <AlertCircle className="w-4 h-4 mr-2" /> Purge Mock Ledger
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-red-700 flex items-center gap-2">
+                  <AlertCircle className="w-5 h-5 text-red-650" /> Purge Mock Ledger Data & Reset Balance Sheet?
+                </DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 py-2 text-sm text-zinc-650 font-sans">
+                <p>
+                  This action will immediately set **all Chart of Account balances to $0.00** and remove all historical mock ledger journal lines. 
+                </p>
+                <p className="font-bold text-red-650">
+                  This can not be undone and is designed for cleaning demo states.
+                </p>
+              </div>
+              <DialogFooter className="bg-zinc-50/50 p-4 border-t border-zinc-100 mt-2">
+                <Button variant="outline" size="sm" onClick={() => setShowResetDialog(false)}>Cancel</Button>
+                <Button size="sm" variant="destructive" onClick={() => { setShowResetDialog(false); handleResetLedger(); }} className="bg-red-600 hover:bg-red-700 text-white">
+                  Confirm Purge & Reset to $0.00
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
           <Dialog open={showCOAModal} onOpenChange={setShowCOAModal}>
             <DialogTrigger asChild>
               <Button size="sm" className="bg-zinc-900 text-white hover:bg-zinc-850">

@@ -37,11 +37,11 @@ export async function initializeChartOfAccounts(businessId: string): Promise<voi
     }
 
     const defaultAccounts = [
-      { code: '1000', name: 'Main POS Cash Till', type: 'Asset', balance: 1000, is_system: true },
+      { code: '1000', name: 'Main POS Cash Till', type: 'Asset', balance: 0, is_system: true },
       { code: '1100', name: 'Accounts Receivable', type: 'Asset', balance: 0, is_system: true },
-      { code: '1200', name: 'Merchandise Inventory Account', type: 'Asset', balance: 5000, is_system: true },
+      { code: '1200', name: 'Merchandise Inventory Account', type: 'Asset', balance: 0, is_system: true },
       { code: '2000', name: 'Accounts Payable', type: 'Liability', balance: 0, is_system: true },
-      { code: '3000', name: 'Shareholders Retained Equity', type: 'Equity', balance: 6000, is_system: true },
+      { code: '3000', name: 'Shareholders Retained Equity', type: 'Equity', balance: 0, is_system: true },
       { code: '4000', name: 'Sales Revenue Account', type: 'Revenue', balance: 0, is_system: true },
       { code: '5000', name: 'Cost of Goods Sold (COGS)', type: 'Expense', balance: 0, is_system: true },
       { code: '6000', name: 'Operating and Cash Expenses', type: 'Expense', balance: 0, is_system: true }
