@@ -166,7 +166,7 @@ export default function Dashboard() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card className="border-border/60 shadow-sm shadow-zinc-200/50 dark:shadow-none hover:shadow-md transition-shadow">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-semibold tracking-wide uppercase text-zinc-500">Total Sales (ZWG)</CardTitle>
+            <CardTitle className="text-sm font-semibold tracking-wide uppercase text-zinc-500">Total Sales (USD)</CardTitle>
             <div className="p-2 bg-primary/10 rounded-md">
               <DollarSign className="h-4 w-4 text-primary" />
             </div>

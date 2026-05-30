@@ -131,7 +131,7 @@ export function PaymentDialog({ open, onOpenChange, onComplete }: PaymentDialogP
                 onClick={() => setSelectedMethod('cash')}
               >
                 <Banknote className="h-5 w-5" />
-                <span className="text-xs">ZWG</span>
+                <span className="text-xs">USD Cash</span>
               </Button>
               <Button 
                 type="button" 
